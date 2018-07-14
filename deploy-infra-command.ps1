@@ -1,0 +1,22 @@
+﻿& "$env:userprofile\git\timecloud-scripts\PowerShell Scripts\Docker Deploy\deploy-infra.ps1" `
+    -gitPath "$env:userprofile\git\timecloud-scripts" `
+    -tagValueProduct "time8" `
+    -tagValueContact "eddy.snow@intapp.com" `
+    -awsAccessKey $(get-content C:\temp\awsAccessKey.txt -ErrorAction SilentlyContinue) `
+    -awsSecretKey $(get-content C:\temp\awsSecretKey.txt -ErrorAction SilentlyContinue) `
+    -region "eu-west-1" `
+    -components gitlablinuxEc2Asg `
+    -stackStemName "eddy-time" `
+    -deploymentBucket "357128852511-eddy-scratch" `
+    -ecsClusterInstanceType t2.micro `
+    -escClusterSize 1 `
+    -hostAmiName amzn-ami-*amazon-ecs-optimized `
+    -keyName eddy-scratch@intapp.com `
+    -ec2AsgInstanceType t2.small `
+    -ec2AsgMultiAz False `
+    -ec2AsgImage amzn-ami-hvm-*-x86_64-gp2* `
+    -confirmWhenStackComplete `
+    -dbSuffix gitlabDb `
+    -dbInstanceClass db.t2.small `
+    -rdsRootPass Password01 `
+    -rdsMultiAz False

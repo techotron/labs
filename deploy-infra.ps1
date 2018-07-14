@@ -1,4 +1,4 @@
-﻿param(
+﻿param (
     [string] $gitPath = "$env:userprofile\git\labs",
     [string] $tagValueProduct,
     [string] $tagValueContact,
@@ -40,7 +40,7 @@ $dockerlinuxEc2AsgStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$st
 $gitlablinuxEc2AsgStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/ec2-asg-gitlab-linux.yml"
 $postgresRdsStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/rds-postgres-db.yml"
 
-$deploymentScriptsPath = "$gitPath\Cloud Formation Templates\Docker-Infrastructure"
+$deploymentScriptsPath = "$gitPath\CloudFormation"
 
 ###################################################################################################################
 #------------------------ Common Tags ----------------------
@@ -160,7 +160,7 @@ $rdsRootPassParam.ParameterValue = $rdsRootPass
 
 $rdsKmsKeyParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
 $rdsKmsKeyParam.ParameterKey = "kmsKey"
-$rdsKmsKeyParam.ParameterValue = "arn:aws:kms:eu-west-1:357128852511:key/b4d2e1b0-fe5c-4ee8-8170-f2b9d10f2634"
+$rdsKmsKeyParam.ParameterValue = "arn:aws:kms:us-east-1:722777194664:key/bca8781b-18b9-42be-830a-381b5683c876"
 
 $rdsSnapShotIdParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
 $rdsSnapShotIdParam.ParameterKey = "DBSnapshotIdentifier"
@@ -201,7 +201,7 @@ Write-S3Object -BucketName $deploymentBucket -KeyPrefix git/$stackStemName -Recu
 if ($components -contains "vpc") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-vpc")
-    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -stackName $("$stackStemName-vpc") -stackUrl $vpcStackUrl -parameters $stackNameParam -tags $tagProduct, $tagProductComponentsVpc, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region 
+    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -stackName $("$stackStemName-vpc") -stackUrl $vpcStackUrl -parameters $stackNameParam -tags $tagProduct, $tagProductComponentsVpc, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region
     
     if ($confirmWhenStackComplete) {
 

@@ -1,5 +1,5 @@
 ﻿param(
-    [string] $gitPath = "$env:userprofile\git\timecloud-scripts",
+    [string] $gitPath = "$env:userprofile\git\labs",
     [string] $tagValueProduct,
     [string] $tagValueContact,
     [string] $awsAccessKey,
@@ -7,7 +7,7 @@
     [string] $region,
     [ValidateSet("vpc","repository","ecscluster","windowsEc2Asg","genericlinuxEc2Asg","dockerlinuxEc2Asg","gitlablinuxEc2Asg","postgresrds")][array] $components,
     [string] $stackStemName,
-    [string] $deploymentBucket = "357128852511-eddy-scratch",
+    [string] $deploymentBucket = "722777194664-eddy-scratch",
     [ValidateSet("t2.micro","t2.small","t2.medium","t2.large")][string] $ecsClusterInstanceType,
     [string] $escClusterSize,
     [ValidateSet("amzn-ami-*amazon-ecs-optimized")][string] $hostAmiName,
@@ -76,7 +76,7 @@ $tagTeam.Value = "Devops"
 
 $tagEnvironment = New-Object Amazon.CloudFormation.Model.Tag
 $tagEnvironment.Key = "Environment"
-$tagEnvironment.Value = "dev"
+$tagEnvironment.Value = "lab"
 
 $tagContact = New-Object Amazon.CloudFormation.Model.Tag
 $tagContact.Key = "Contact"

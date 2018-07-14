@@ -1,1 +1,1 @@
-﻿& 'C:\Users\eddy\git\timecloud-scripts\PowerShell Scripts\Common\deploy\get-latestami.ps1' -region eu-west-1 -imageName "Windows_Server-2016-English-Full-Base-*" -awsAccessKey $(get-content C:\temp\awsAccessKey.txt) -awsSecretKey $(get-content C:\temp\awsSecretKey.txt)
+﻿& 'C:\Users\eddy\git\labs\PowerShell Scripts\Common\deploy\get-latestami.ps1' -region eu-west-1 -imageName "Windows_Server-2016-English-Full-Base-*" -awsAccessKey $(get-content C:\temp\awsAccessKey.txt) -awsSecretKey $(get-content C:\temp\awsSecretKey.txt)

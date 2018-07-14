@@ -1,0 +1,170 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: postgres rds template
+
+Parameters:
+  stackName:
+    Description: name of stack
+    Type: String
+
+  vpcStackName:
+    Description: name of vpc stack in which the rds instance will be deployed into
+    Type: String
+
+  DBSuffix:
+    Description: suffix name for database server
+    Type: String
+
+  rdsInstanceClass:
+    Description: ''
+    Type: String
+    Default: db.t2.small
+
+  rdsInstanceRootLogin:
+    Description: initial root login
+    Type: String
+    Default: postgres
+
+  rdsInstanceRootPassword:
+    Description: initial root password
+    NoEcho: true
+    Type: String
+
+  kmsKey:
+    Description: Cluster CMK Key ARN
+    Type: String
+    Default: 'arn:aws:kms:eu-west-1:357128852511:key/b4d2e1b0-fe5c-4ee8-8170-f2b9d10f2634'
+
+  DBSnapshotIdentifier:
+    Description: Database snapshot to restore on provisioning
+    Type: String
+    Default: ''
+
+  multiAZ:
+    Description: Flag for multiAZ environment
+    AllowedValues:
+      - "True"
+      - "False"
+    Type: String
+    Default: "False"
+
+Conditions:
+  useRdsSnapshot:
+    !Not [ !Equals [ !Ref DBSnapshotIdentifier, "" ] ]
+  useMultiAZ:
+    !Not [ !Equals [ !Ref multiAZ, "False" ] ]
+
+Resources:
+  database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    Properties:
+      DBInstanceIdentifier: !Ref stackName
+      DBInstanceClass: !Ref rdsInstanceClass
+      DBSnapshotIdentifier:
+        Fn::If:
+        - useRdsSnapshot
+        - !Ref DBSnapshotIdentifier
+        - !Ref AWS::NoValue
+      KmsKeyId: !If
+        - useRdsSnapshot
+        - !Ref AWS::NoValue
+        - !Ref kmsKey
+      StorageEncrypted: true
+      Engine: postgres
+      EngineVersion: 9.6.6
+      DBParameterGroupName: !Ref databaseParamGroup
+      AllowMajorVersionUpgrade: 'false'
+      AllocatedStorage: '200'
+      StorageType: gp2
+      MasterUsername: !Ref rdsInstanceRootLogin
+      MasterUserPassword: !Ref rdsInstanceRootPassword
+      MultiAZ: !If
+        - useMultiAZ
+        - true
+        - false
+      MonitoringInterval: '60'
+      MonitoringRoleArn: !Join [ "", [ "arn:aws:iam::", !Ref "AWS::AccountId", ":role/rds-monitoring-role" ] ]
+      DBSubnetGroupName: !Ref databaseSubnetGroup
+      VPCSecurityGroups:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "externalpostgres-securitygroup" ]]
+      PubliclyAccessible: true
+      BackupRetentionPeriod: '31'
+      PreferredBackupWindow: '07:30-08:00'
+      PreferredMaintenanceWindow: 'sat:05:00-sat:07:00'
+      Tags:
+        - Key: Name
+          Value: !Ref stackName
+      CopyTagsToSnapshot: true
+
+  databaseParamGroup:
+    Type: 'AWS::RDS::DBParameterGroup'
+    Properties:
+      Description: Tenant Database Parameters Group
+      Family: postgres9.6
+      Parameters:
+        max_connections: 'LEAST({DBInstanceClassMemory/2382848},5000)'
+        rds.logical_replication: '1'
+        max_replication_slots: '20'
+        pg_stat_statements.track: ALL
+        shared_preload_libraries: pg_stat_statements
+        track_activity_query_size: '2048'
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref stackName, "paramGroup" ] ]
+
+  databaseSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: Tenant Database Subnet Group
+      SubnetIds:
+#        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "private-subnet1" ]]
+#        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "private-subnet2" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet2" ]]
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref stackName, "subnetGroup" ] ]
+
+  rdsAlarmNoConnections:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: Alarm for RDS for amount of connection less that 1
+      Namespace: AWS/RDS
+      MetricName: DatabaseConnections
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref database
+      Statistic: Minimum
+      Period: '60'
+      EvaluationPeriods: '15'
+      Threshold: '0'
+      ComparisonOperator: LessThanOrEqualToThreshold
+
+Outputs:
+  rdsDatabaseEndpoint:
+    Description: endpoint for timedata database
+    Value:
+      Fn::GetAtt: [ database, Endpoint.Address ]
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "rdsDatabaseEndpoint", !Ref DBSuffix ]]
+
+  rdsDatabaseEndpointPort:
+    Description: endpoint port for timedata database
+    Value:
+      Fn::GetAtt: [ database, Endpoint.Port ]
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "rdsDatabaseEndpointPort", !Ref DBSuffix ]]
+
+  rdsInstanceRootLogin:
+    Description: root login
+    Value: !Ref rdsInstanceRootLogin
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "rdsRootLogin", !Ref DBSuffix ]]
+
+  rdsInstanceRootPassword:
+    Description: root password
+    Value: !Ref rdsInstanceRootPassword
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "rdsRootPassword", !Ref DBSuffix ]]

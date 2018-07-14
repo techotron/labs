@@ -1,0 +1,348 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: generic windows ec2 auto scaling group
+
+Parameters:
+  keyName:
+    Description: Key pair to use for instances
+    Type: String
+
+  vpcStackName:
+    Description: Name of the vpc stack in which to deploy the cluster
+    Type: String
+
+  stackName:
+    Description: Name of the stack to distinguish it from other stacks
+    Type: String
+
+  instanceType:
+    Description: ec2 instance type
+    Type: String
+
+  multiAZ:
+    Description: Flag for multi AZ environment
+    AllowedValues:
+      - "True"
+      - "False"
+    Type: String
+    Default: "False"
+
+#  configureScript:
+#    Description: S3 URL for the Install Scripts
+#    Type: String
+
+  s3BuildBucket:
+    Description: S3 Bucket for deployment resources
+    Type: String
+
+  scaleUpSchedule:
+    Description: Cron expression for scheduled scale UP action
+    Type: String
+
+  scaleDownSchedule:
+    Description: Cron expression for scheduled scale DOWN action
+    Type: String
+
+  ec2Image:
+    Description: AMI for the ec2 instance
+    Type: String
+
+Mappings:
+  "multiAZ":
+    "True":
+      minInstancesInService: 2
+      maxInstancesInService: 4
+    "False":
+      minInstancesInService: 1
+      maxInstancesInService: 4
+
+Resources:
+  ec2VMUpdateWaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  eC2VMUpdateWaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn: autoScalingGroup
+    Properties:
+      Handle: !Ref ec2VMUpdateWaitHandle
+      Timeout: '2400'
+
+  loadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      HealthCheck:
+        Target: 'TCP:80'
+        HealthyThreshold: '3'
+        UnhealthyThreshold: '5'
+        Interval: '30'
+        Timeout: '5'
+      LoadBalancerName: !Join [ "-", [ !Ref stackName, "elb" ]]
+      Listeners:
+        - LoadBalancerPort: '80'
+          InstancePort: '80'
+          Protocol: TCP
+      Scheme: internet-facing
+      Subnets:
+#        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "private-subnet1" ]]
+#        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "private-subnet2" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet2" ]]
+      SecurityGroups:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "webtraffic-securitygroup" ]]
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref stackName, "elb" ]]
+        - Key: ProductComponents
+          Value: elb
+
+  ssmInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref ssmRole
+
+  ssmRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ssm:DescribeAssociation'
+                  - 'ssm:GetDeployablePatchSnapshotForInstance'
+                  - 'ssm:GetDocument'
+                  - 'ssm:GetParameters'
+                  - 'ssm:ListAssociations'
+                  - 'ssm:ListInstanceAssociations'
+                  - 'ssm:PutInventory'
+                  - 'ssm:UpdateAssociationStatus'
+                  - 'ssm:UpdateInstanceAssociationStatus'
+                  - 'ssm:UpdateInstanceInformation'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'ec2messages:AcknowledgeMessage'
+                  - 'ec2messages:DeleteMessage'
+                  - 'ec2messages:FailMessage'
+                  - 'ec2messages:GetEndpoint'
+                  - 'ec2messages:GetMessages'
+                  - 'ec2messages:SendReply'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'cloudwatch:PutMetricData'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeInstanceStatus'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'ds:CreateComputer'
+                  - 'ds:DescribeDirectories'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:DescribeLogGroups'
+                  - 'logs:DescribeLogStreams'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:Get*'
+                  - 's3:List*'
+                  - 's3:AbortMultipartUpload'
+                  - 's3:ListMultipartUploadParts'
+                  - 's3:ListBucketMultipartUploads'
+                Resource: '*'
+
+  autoScalingLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !Ref ec2Image
+      IamInstanceProfile: !Ref ssmInstanceProfile
+      InstanceType: !Ref instanceType
+      KeyName: !Ref keyName
+      SecurityGroups:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "externalrdp-securitygroup" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "webtraffic-securitygroup" ]]
+      UserData: !Base64
+        'Fn::Join':
+          - ''
+          - - "<script>\r\n"
+            - 'cfn-init.exe -v -s '
+            - !Ref 'AWS::StackId'
+            - ' -r autoScalingGroup'
+            - ' --region '
+            - !Ref 'AWS::Region'
+            - "\r\n"
+            - >-
+              cfn-signal.exe -e %ERRORLEVEL% -r "cfn-init returned code
+              %ERRORLEVEL%"
+            - !Base64
+              Ref: ec2VMUpdateWaitHandle
+            - "\r\n"
+            - </script>
+
+  autoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Metadata:
+      AWS::CloudFormation::Authentication:
+        s3AccessCreds:
+          type: S3
+          roleName: !Ref ssmRole
+          buckets:
+            - !Ref s3BuildBucket
+      AWS::CloudFormation::Init:
+        config:
+          files:
+            c:\cfn\hooks.d\cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.autoScalingGroup.Metadata.AWS::CloudFormation::Init
+                action=cfn-init.exe -v -s ${AWS::StackId} -r autoScalingGroup --region ${AWS::Region}
+            c:\cfn\cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackName}
+                region=${AWS::Region}
+                interval=1
+            c:\tools\event-log-tracer.ps1:
+              content: !Sub |
+                param(
+                    [string] $logName = "Application"
+                )
+
+                for (;;) {
+
+                    $oldLog = Get-EventLog -LogName $logName -Newest 1
+                    $oldIndex = $oldLog.Index
+
+                    sleep -Milliseconds 10
+
+                    $newLog = Get-EventLog -LogName $logName -Newest 1
+                    $newIndex = $newLog.Index
+
+                    if ($newIndex -gt $oldIndex) {
+
+                        write-host "[$($newLog.timegenerated)]" -foregroundcolor yellow -nonewline
+                        write-host "- $($newLog.entrytype) - $($newLog.message)"
+
+                    }
+
+                }
+            c:\tools\write-event-log.ps1:
+              content: !Sub |
+                Param(
+                    [Parameter(Mandatory=$true)]  [string] $message,
+                    [Parameter(Mandatory=$false)]  [string] $etype = "Information"
+                )
+
+                if ((get-eventlog -LogName Application | Select-Object Source -Unique).source -notcontains "CustomEc2Config") {
+
+                  New-EventLog -source CustomEc2Config -LogName Application
+
+                }
+
+                If ($etype -eq "Error") {
+
+                    Write-Eventlog -LogName Application -Source CustomEc2Config -EventId 1001 -EntryType Error -Message $message
+
+                } else {
+
+                    Write-Eventlog -LogName Application -Source CustomEc2Config -EventId 1000 -EntryType Information -Message $message
+
+                }
+
+                Write-Output $message
+            c:\users\administrator\desktop\log-tracer.bat:
+              content: !Sub |
+                powershell.exe -command "c:\tools\event-log-tracer.ps1"
+#            c:\config_scripts\configureScript.ps1:
+#              source: !Ref configureScript
+#              authentication: s3AccessCreds
+          commands:
+            001-create-test-file:
+              command: !Join
+                - ''
+                - - 'powershell.exe -executionpolicy unrestricted -command "add-content -path c:\cfn-create-test-file.log -value (get-date)"'
+              waitAfterCompletion: 0
+            999-signal-complete:
+              command: !Join
+                - ''
+                - - 'cfn-signal.exe -e 0 -r "call to 999-signal-complete" '
+                  - !Base64
+                    Ref: ec2VMUpdateWaitHandle
+              ignoreErrors: true
+              waitAfterCompletion: 0
+          services:
+            windows:
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - c:\cfn\cfn-hup.conf
+                  - c:\cfn\hooks.d\cfn-auto-reloader.conf
+    Properties:
+      AvailabilityZones:
+        - !Select
+          - '0'
+          - !GetAZs ''
+        - !Select
+          - '1'
+          - !GetAZs ''
+      VPCZoneIdentifier:
+# Place Instances into public subnet for now so I can RDP onto them easily. ES.
+#        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "private-subnet1" ]]
+#        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "private-subnet2" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet2" ]]
+      LaunchConfigurationName: !Ref autoScalingLaunchConfig
+      MinSize:
+        Fn::FindInMap: [multiAZ, !Ref multiAZ, minInstancesInService]
+      MaxSize:
+        Fn::FindInMap: [multiAZ, !Ref multiAZ, maxInstancesInService]
+      LoadBalancerNames:
+        - !Ref loadBalancer
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref stackName, "asg" ]]
+          PropagateAtLaunch: 'true'
+
+  scalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      PolicyType: SimpleScaling
+      Cooldown: '60'
+      AutoScalingGroupName: !Ref autoScalingGroup
+      ScalingAdjustment: 1
+
+Outputs:
+  loadBalancerCname:
+    Description: CNAME for internal ELB
+    Value:
+      Fn::GetAtt: [ loadBalancer, DNSName ]
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "loadBalancerCname" ]]
+
+

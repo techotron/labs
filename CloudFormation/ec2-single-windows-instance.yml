@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Time8.0 Jumpbox Instance
+
+Parameters:
+  keyName:
+    Description: Key pair to use for instances
+    Type: String
+
+  vpcStackName:
+    Description: Name of the vpc stack in which to deploy the cluster
+    Type: String
+
+  stackName:
+    Description: Name of the stack to distinguish it from other stacks
+    Type: String
+
+  instanceType:
+    Description: ec2 instance type
+    Type: String
+
+  ec2Image:
+    Description: AMI for the ec2 instance
+    Type: String
+
+  adminPassword:
+    Description: Admin password
+    Type: String
+
+Resources:
+  jumpboxInstance:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          files:
+            c:\tools\change-admin-password.ps1:
+              content: !Sub |
+                param(
+                  [string] $adminPassword
+                )
+
+                & c:\tools\write-event-log.ps1 -message "Changing Administrator password..."
+                $Admin = [adsi]("WinNT://$env:ComputerName/Administrator, user")
+                $Admin.Invoke("SetPassword", $adminPassword)
+
+                if (!($?)) {
+
+                  & c:\tools\write-event-log.ps1 -message "Failed to set administrator password!" -eType Error
+
+                } else {
+
+                  & c:\tools\write-event-log.ps1 -message "Successfully set administrator password"
+
+                }
+          commands:
+            010-set-admin-password:
+              command: !Join
+                - ''
+                - - 'powershell.exe -executionpolicy unrestricted -command "& c:\tools\change-admin-password.ps1 -adminPassword '
+                  - Ref: adminPassword
+                  - '"'
+              waitAfterCompletion: 0
+    Properties:
+      InstanceType: !Ref instanceType
+      KeyName: !Ref keyName
+      ImageId: !Ref ec2Image
+      NetworkInterfaces:
+        - DeleteOnTermination: 'true'
+          DeviceIndex: 0
+          SubnetId:
+            Fn::ImportValue: !Join [ "-", [ "time", !Ref vpcStackName, "public-subnet1" ]]
+          GroupSet:
+            - Fn::ImportValue: !Join [ "-", [ "time", !Ref vpcStackName, "externalrdp-securitygroup" ]]
+      UserData: !Base64
+        'Fn::Join':
+          - ''
+          - - "<script>\r\n"
+            - 'cfn-init.exe -v -s '
+            - !Ref 'AWS::StackId'
+            - ' -r jumpboxInstance'
+            - ' --region '
+            - !Ref 'AWS::Region'
+            - "\r\n"
+            - </script>
+      Tags:
+        - Key: Name
+          Value:
+            !Join [ "-", [ "time", !Ref stackName, "jumpbox" ]]
+
+Outputs:
+  publicDns:
+    Description: Public DNS record for the Jumpbox instance
+    Value:
+      Fn::GetAtt: [ jumpboxInstance, PublicDnsName ]
+    Export:
+      Name: !Join [ "-", [ "time", !Ref stackName, "jumpbox", "publicDns" ]]
+
+  publicIp:
+    Description: Public IP address for the Jumpbox instance
+    Value:
+      Fn::GetAtt: [ jumpboxInstance, PublicIp ]
+    Export:
+      Name: !Join [ "-", [ "time", !Ref stackName, "jumpbox", "publicIp" ]]
+
+  adminUsername:
+    Description: Local Admin username
+    Value: ".\\Administrator"
+    Export:
+      Name: !Join [ "-", [ "time", !Ref stackName, "jumpbox", "adminUsername" ]]
+
+  adminPassword:
+    Description: Local Admin password
+    Value: !Ref adminPassword
+    Export:
+      Name: !Join [ "-", [ "time", !Ref stackName, "jumpbox", "adminPassword" ]]
+
+

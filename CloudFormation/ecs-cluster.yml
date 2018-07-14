@@ -1,0 +1,233 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: generic ecs cluster
+
+Parameters:
+  keyName:
+    Description: Key pair to use for instances
+    Type: String
+
+  stackName:
+    Description: Name of the stack to distinguish it from other stacks
+    Type: String
+
+  vpcStackName:
+    Description: Name of the VPC stack to place the EC cluster into
+    Type: String
+
+  instanceType:
+    Description: Which instance type should we use to build the ECS cluster
+    Type: String
+
+  clusterSize:
+    Description: How many ECS hosts do you want to initially deploy?
+    Type: Number
+    Default: 1
+
+  ecsAmi:
+    Description: Amazon AMI for running ECS cluster
+    Type: String
+
+Resources:
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref stackName
+
+  ECSMemoryHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      EvaluationPeriods: '1'
+      Statistic: Average
+      Threshold: '80'
+      AlarmDescription: Alarm if CPU too high or metric disappears indicating instance is down
+      Period: '60'
+      AlarmActions:
+        - Ref: ECSScaleUp
+      Namespace: AWS/ECS
+      Dimensions:
+        - Name: ClusterName
+          Value:
+            Ref: ECSCluster
+      ComparisonOperator: GreaterThanThreshold
+      MetricName: MemoryReservation
+
+  ECSScaleUp:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref ECSAutoScalingGroup
+      AdjustmentType: 'ChangeInCapacity'
+      ScalingAdjustment: '1'
+      Cooldown: 120
+
+  ECSScaleDown:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref ECSAutoScalingGroup
+      AdjustmentType: 'ChangeInCapacity'
+      ScalingAdjustment: '-1'
+      Cooldown: 300
+
+  ECSMemoryLow:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      EvaluationPeriods: '10'
+      Statistic: Average
+      Threshold: '50'
+      AlarmDescription: Alarm if CPU too low or metric disappears indicating instance is down
+      Period: '600'
+      AlarmActions:
+        - Ref: ECSScaleDown
+      Namespace: AWS/ECS
+      Dimensions:
+        - Name: ClusterName
+          Value:
+            Ref: ECSCluster
+      ComparisonOperator: LessThanThreshold
+      MetricName: MemoryReservation
+
+  ECSAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet2" ]]
+      LaunchConfigurationName: !Ref ECSLaunchConfiguration
+      MinSize: 1
+      MaxSize: 4
+      DesiredCapacity: !Ref clusterSize
+      HealthCheckGracePeriod: 300
+      HealthCheckType: 'EC2'
+      MetricsCollection:
+        -
+          Granularity: 1Minute
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref stackName, "asg" ]]
+          PropagateAtLaunch: true
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT5M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT15M
+        SuspendProcesses:
+          - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
+        WaitOnResourceSignals: true
+
+  ECSLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId:  !Ref ecsAmi
+      InstanceType: !Ref instanceType
+      SecurityGroups:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
+      IamInstanceProfile: !Ref ECSInstanceProfile
+      KeyName: !Ref keyName
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSLaunchConfiguration
+          /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSAutoScalingGroup
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          commands:
+            01_add_instance_to_cluster:
+              command: !Sub echo ECS_CLUSTER=${ECSCluster} > /etc/ecs/ecs.config
+          files:
+            "/etc/cfn/cfn-hup.conf":
+              mode: 000400
+              owner: root
+              group: root
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+            "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.ECSLaunchConfiguration.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSLaunchConfiguration
+          services:
+            sysvinit:
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+
+  ECSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: !Join [ "-", [ !Ref stackName, "role" ]]
+      AssumeRolePolicyDocument: |
+        {
+          "Statement": [{
+            "Action": "sts:AssumeRole",
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "ec2.amazonaws.com"
+            }
+          }]
+        }
+      Policies:
+        - PolicyName: ecs-service
+          PolicyDocument:
+            Statement:
+              -
+                Sid: ECSPart
+                Effect: Allow
+                Action:
+                  - "ecs:CreateCluster"
+                  - "ecs:DeregisterContainerInstance"
+                  - "ecs:DiscoverPollEndpoint"
+                  - "ecs:Poll"
+                  - "ecs:RegisterContainerInstance"
+                  - "ecs:StartTelemetrySession"
+                  - "ecs:Submit*"
+                  - "ecr:BatchCheckLayerAvailability"
+                  - "ecr:BatchGetImage"
+                  - "ecr:GetDownloadUrlForLayer"
+                  - "ecr:GetAuthorizationToken"
+                Resource: "*"
+              -
+                Sid: "OpenIntegration"
+                Effect: "Allow"
+                Action:
+                  - "sqs:*"
+                Resource: "*"
+              -
+                Sid: "Logging"
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "logs:DescribeLogStreams"
+                  - "cloudwatch:*"
+                Resource: "*"
+
+  ECSInstanceProfile:
+      Type: AWS::IAM::InstanceProfile
+      Properties:
+        Path: /
+        Roles:
+          - !Ref ECSRole
+
+Outputs:
+  Cluster:
+    Description: A reference to the ECS cluster
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Join [ "-", [ "time", !Ref stackName, "ECSCluster" ]]

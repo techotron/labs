@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: generic ecs repository
+
+Parameters:
+  stackName:
+    Description: Name of the stack to distinguish it from other stacks
+    Type: String
+
+Resources:
+  ECSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: !Join [ "-", [ !Ref stackName, "role" ]]
+      AssumeRolePolicyDocument: |
+        {
+          "Statement": [{
+            "Action": "sts:AssumeRole",
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "ec2.amazonaws.com"
+            }
+          }]
+        }
+      Policies:
+        - PolicyName: ecs-service
+          PolicyDocument:
+            Statement:
+              -
+                Sid: ECSPart
+                Effect: Allow
+                Action:
+                  - "ecs:CreateCluster"
+                  - "ecs:DeregisterContainerInstance"
+                  - "ecs:DiscoverPollEndpoint"
+                  - "ecs:Poll"
+                  - "ecs:RegisterContainerInstance"
+                  - "ecs:StartTelemetrySession"
+                  - "ecs:Submit*"
+                  - "ecr:BatchCheckLayerAvailability"
+                  - "ecr:BatchGetImage"
+                  - "ecr:GetDownloadUrlForLayer"
+                  - "ecr:GetAuthorizationToken"
+                Resource: "*"
+              -
+                Sid: "OpenIntegration"
+                Effect: "Allow"
+                Action:
+                  - "sqs:*"
+                Resource: "*"
+              -
+                Sid: "Logging"
+                Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "logs:DescribeLogStreams"
+                  - "cloudwatch:*"
+                Resource: "*"
+
+  Repository:
+    Type: "AWS::ECR::Repository"
+    Properties:
+      RepositoryName:  !Ref stackName
+      RepositoryPolicyText:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Sid: AllowPushPull
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Join ["", ["arn:aws:iam::", !Ref "AWS::AccountId", ":role/", !Ref ECSRole]]
+            Action:
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:BatchGetImage"
+              - "ecr:BatchCheckLayerAvailability"
+              - "ecr:PutImage"
+              - "ecr:InitiateLayerUpload"
+              - "ecr:UploadLayerPart"
+              - "ecr:CompleteLayerUpload"
+
+Outputs:
+  RepositoryURI:
+    Description: Repository name
+    Value: !Join [".", [!Ref "AWS::AccountId", "dkr.ecr", !Ref "AWS::Region", !Join ["/", ["amazonaws.com", !Ref Repository]]]]
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "RepositoryURI" ]]

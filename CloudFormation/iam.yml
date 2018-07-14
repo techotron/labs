@@ -1,0 +1,205 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: IAM Resources template
+
+Parameters:
+  stackName:
+    Description: Name of the stack to distinguish it from other stacks
+    Type: String
+
+  User1IamUsername:
+    Description: Username for the job scheduler account
+    Type: String
+
+  User2IamUsername:
+    Description: Username for the job executor account
+    Type: String
+
+  User3IamUsername:
+    Description: Username for the job executor account
+    Type: String
+
+  connectionStringBucket:
+    Description: S3 Bucket name which holds the connection strings
+    Type: String
+
+Resources:
+  User1IamUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Join [ "", [ !Ref stackName, ".", !Ref User1IamUsername, "@", !Ref "AWS::Region" ]]
+      Groups: [!Ref User1IamGroup]
+
+  User1IamAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref User1IamUser
+
+  User1IamPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Join [ "", [ "user1.policy@", !Ref "AWS::Region" ]]
+      Groups:
+        - !Ref User1IamGroup
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Action:
+              - "dynamodb:ListTables"
+              - "dynamodb:Scan"
+              - "dynamodb:PutItem"
+              - "dynamodb:DeleteItem"
+              - "dynamodb:GetItem"
+              - "dynamodb:Query"
+              - "dynamodb:UpdateItem"
+              - "sqs:ListQueues"
+              - "sqs:GetQueueAttributes"
+              - "sqs:GetQueueUrl"
+              - "sqs:ReceiveMessage"
+              - "sqs:ChangeMessageVisibility"
+              - "sqs:ChangeMessageVisibilityBatch"
+              - "sqs:DeleteMessage"
+              - "sqs:DeleteMessageBatch"
+              - "sqs:PurgeQueue"
+              - "sqs:SendMessage"
+              - "sqs:SendMessageBatch"
+              - "sqs:ChangeMessageVisibilityBatch"
+            Resource: "*"
+
+  User1IamGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Join [ "", [ "user1.group@", !Ref "AWS::Region" ]]
+
+  User2IamUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Join [ "", [ !Ref stackName, ".", !Ref User2IamUsername, "@", !Ref "AWS::Region" ]]
+      Groups: [!Ref User2IamGroup]
+
+  User2IamAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref User2IamUser
+
+  User2IamPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Join [ "", [ "user2.policy@", !Ref "AWS::Region" ]]
+      Groups:
+        - !Ref User2IamGroup
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Action:
+              - "dynamodb:BatchGetItem"
+              - "dynamodb:BatchWriteItem"
+              - "dynamodb:DescribeTable"
+              - "dynamodb:ListTables"
+              - "dynamodb:Scan"
+              - "dynamodb:PutItem"
+              - "dynamodb:DeleteItem"
+              - "dynamodb:GetItem"
+              - "dynamodb:Query"
+              - "dynamodb:UpdateItem"
+              - "sqs:ListQueues"
+              - "sqs:GetQueueAttributes"
+              - "sqs:GetQueueUrl"
+              - "sqs:ReceiveMessage"
+              - "sqs:ChangeMessageVisibility"
+              - "sqs:ChangeMessageVisibilityBatch"
+              - "sqs:DeleteMessage"
+              - "sqs:DeleteMessageBatch"
+              - "sqs:PurgeQueue"
+              - "sqs:SendMessage"
+              - "sqs:SendMessageBatch"
+              - "sqs:ChangeMessageVisibilityBatch"
+            Resource: "*"
+          -
+            Effect: "Allow"
+            Action:
+              - "s3:get*"
+              - "s3:list*"
+            Resource:
+              - !Join [ "", [ "arn:aws:s3:::", !Ref connectionStringBucket, "*" ]]
+
+  User2IamGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Join [ "", [ "user2.group@", !Ref "AWS::Region" ]]
+
+  User3IamUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Join [ "", [ !Ref stackName, ".", !Ref User3IamUsername, "@", !Ref "AWS::Region" ]]
+      Groups: [!Ref User3IamGroup]
+
+  User3IamAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref User3IamUser
+
+  User3IamPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Join [ "", [ "user3.policy@", !Ref "AWS::Region" ]]
+      Groups:
+        - !Ref User3IamGroup
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Action:
+              - "s3:get*"
+              - "s3:list*"
+            Resource:
+              - !Join [ "", [ "arn:aws:s3:::", !Ref connectionStringBucket, "*" ]]
+
+  User3IamGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Join [ "", [ "user3.group@", !Ref "AWS::Region" ]]
+
+Outputs:
+  User1IamAccessKey:
+    Description: Access key for the job scheduler
+    Value: !Ref User1IamAccessKey
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "User1IamAccessKey" ]]
+
+  User1IamSecretKey:
+    Description: Secret key for the job scheduler
+    Value: !GetAtt User1IamAccessKey.SecretAccessKey
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "User1IamSecretKey" ]]
+
+  User2IamAccessKey:
+    Description: Access key for the job executor
+    Value: !Ref User2IamAccessKey
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "User2IamAccessKey" ]]
+
+  User2IamSecretKey:
+    Description: Secret key for the job executor
+    Value: !GetAtt User2IamAccessKey.SecretAccessKey
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "User2IamSecretKey" ]]
+
+  User3IamAccessKey:
+    Description: Access key for the auth component which gets the connection string
+    Value: !Ref User3IamAccessKey
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "User3IamAccessKey" ]]
+
+  User3IamSecretKey:
+    Description: Secret key for the auth component which gets the connection string
+    Value: !GetAtt User3IamAccessKey.SecretAccessKey
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "User3IamSecretKey" ]]
+
+

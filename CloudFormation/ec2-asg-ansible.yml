@@ -364,7 +364,7 @@ Resources:
             /usr/local/bin/install-ansible.sh:
               content: !Sub |
                 #!/bin/bash
-                sudo yum install –y ansible
+                sudo yum -y install ansible
               mode: "000755"
               owner: "root"
               group: "root"

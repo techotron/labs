@@ -16,7 +16,7 @@
     [ValidateSet("False","True")][string] $ec2AsgMultiAz,
     [string] $ec2AsgScaleUpSchedule = "0 9 * * *",
     [string] $ec2AsgScaleDownSchedule = "0 10 * * *",
-    [ValidateSet("Windows_Server-2016-English-Nano-Base*","Windows_Server-2016-English-Full-Base*","Windows_Server-2016-English-Core-Base*","amzn-ami-hvm-*-x86_64-gp2*")][string] $ec2AsgImage,
+    [ValidateSet("Windows_Server-2016-English-Nano-Base*","Windows_Server-2016-English-Full-Base*","Windows_Server-2016-English-Core-Base*","amzn-ami-hvm-*-x86_64-gp2*","ubuntu-16.04")][string] $ec2AsgImage,
     [switch] $confirmWhenStackComplete,
     [string] $dbSuffix,
     [ValidateSet("db.t2.small","db.t2.medium","db.t2.large")][String] $dbInstanceClass,
@@ -130,6 +130,10 @@ $ec2AnsibleInstanceTypeParam.ParameterValue = $ec2AnsibleInstanceType
 $ec2AnsiblePemToInjectParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
 $ec2AnsiblePemToInjectParam.ParameterKey = "pemToInject"
 $ec2AnsiblePemToInjectParam.ParameterValue = $pemToInjectUrl
+
+$ec2AnsibleAmiParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
+$ec2AnsibleAmiParam.ParameterKey = "ansibleAmi"
+$ec2AnsibleAmiParam.ParameterValue = ""
 
 $ec2MultiAzParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
 $ec2MultiAzParam.ParameterKey = "multiAZ"
@@ -415,8 +419,9 @@ if ($components -contains "ansible") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-ansible")
     $ec2AsgAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName $ec2AsgImage -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
-
-    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-ansible") -stackUrl $ansibleStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2AnsibleInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam, $ec2AnsiblePemToInjectParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
+    $ec2AnsibleAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName ubuntu-16.04 -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
+        
+    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-ansible") -stackUrl $ansibleStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2AnsibleInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam, $ec2AnsiblePemToInjectParam, $ec2AnsibleAmiParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
     
     if ($confirmWhenStackComplete) {
 

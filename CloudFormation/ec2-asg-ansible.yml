@@ -23,6 +23,10 @@ Parameters:
     Description: ec2 instance type for ansible server
     Type: String
 
+  ansibleAmi:
+    Description: ami for ansible server
+    Type: String
+
   pemToInject:
     Description: Pem file to inject into Ansible server to connect to nodes
     Type: String
@@ -299,7 +303,7 @@ Resources:
   ansibleAutoScalingLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      ImageId: !Ref ec2Image
+      ImageId: !Ref ansibleAmi
       IamInstanceProfile: !Ref ssmInstanceProfile
       InstanceType: !Ref ansibleInstanceType
       KeyName: !Ref keyName
@@ -356,11 +360,11 @@ Resources:
             /usr/local/bin/run-updates.sh:
               content: !Sub |
                 #!/bin/sh
-                sudo yum install –y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-                sudo yum install –y epel-release
-                sudo yum update -y
-                sudo ln -s /usr/local/bin/pip /usr/bin
+                sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm --assumeyes
+                sudo yum install epel-release --assumeyes
+                sudo yum update --assumeyes
                 sudo pip install --upgrade pip
+                sudo ln -s /usr/local/bin/pip /usr/bin
               mode: "000755"
               owner: "root"
               group: "root"
@@ -379,16 +383,16 @@ Resources:
               group: "root"
           commands:
             000-script-start:
-              command: "echo \"$(date) - 000-script-start\" | sudo tee --append /home/ec2-user/eddyCFN.log"
+              command: "echo \"$(date) - 000-script-start\" | sudo tee --append /home/ubuntu/eddyCFN.log"
               waitAfterCompletion: '0'
-            010-run-updates:
-              command: "echo \"$(date) - 010-run-updates\" | sudo tee --append /home/ec2-user/eddyCFN.log && sudo /usr/local/bin/run-updates.sh"
-              waitAfterCompletion: '0'
-            020-run-updates:
-              command: "echo \"$(date) - 020-install-ansible\" | sudo tee --append /home/ec2-user/eddyCFN.log && sudo /usr/local/bin/install-ansible.sh"
-              waitAfterCompletion: '0'
+#            010-run-updates:
+#              command: "echo \"$(date) - 010-run-updates\" | sudo tee --append /home/ubuntu/eddyCFN.log && sudo /usr/local/bin/run-updates.sh"
+#              waitAfterCompletion: '0'
+#            020-run-updates:
+#              command: "echo \"$(date) - 020-install-ansible\" | sudo tee --append /home/ubuntu/eddyCFN.log && sudo /usr/local/bin/install-ansible.sh"
+#              waitAfterCompletion: '0'
             998-script-end-log:
-              command: "echo \"$(date) - 998-script-end-log\" | sudo tee --append /home/ec2-user/eddyCFN.log"
+              command: "echo \"$(date) - 998-script-end-log\" | sudo tee --append /home/ubuntu/eddyCFN.log"
               waitAfterCompletion: '0'
             999-signal-complete:
               command: !Join

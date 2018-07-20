@@ -5,7 +5,15 @@
     [string] $awsSecretKey
 )
 
-$imageId = (Get-EC2ImageByName -Name "*$imageName" -region $region -AccessKey $awsAccessKey -SecretKey $awsSecretKey | Sort-Object CreationDate -Descending).imageId[0]
+if ($imageName -eq "ubuntu-16.04") {
+
+    $imageId = "ami-2a7d75c0"
+
+} else {
+
+    $imageId = (Get-EC2ImageByName -Name "*$imageName" -region $region -AccessKey $awsAccessKey -SecretKey $awsSecretKey | Sort-Object CreationDate -Descending).imageId[0]
+
+}
 
 if (!($?)) {
 

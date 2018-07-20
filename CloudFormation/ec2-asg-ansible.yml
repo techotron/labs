@@ -344,7 +344,7 @@ Resources:
           SubnetId:
             Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
           GroupSet:
-            - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "externalrdp-securitygroup" ]]
+            - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "externalssh-securitygroup" ]]
       UserData: !Base64
         'Fn::Join':
           - ''

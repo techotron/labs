@@ -357,15 +357,15 @@ Resources:
               content: !Sub |
                 #!/bin/bash
                 sudo yum install –y epel-release
-                sudo yum update
-              mode: "000400"
+                sudo yum update -y
+              mode: "000755"
               owner: "root"
               group: "root"
             /usr/local/bin/install-ansible.sh:
               content: !Sub |
                 #!/bin/bash
                 sudo yum install –y ansible
-              mode: "000400"
+              mode: "000755"
               owner: "root"
               group: "root"
           commands:
@@ -373,10 +373,10 @@ Resources:
               command: "echo \"$(date) - 000-script-start\" | sudo tee --append /home/ec2-user/eddyCFN.log"
               waitAfterCompletion: '0'
             010-run-updates:
-              command: "echo \"$(date) - 010-run-updates\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/run-updates.sh"
+              command: "echo \"$(date) - 010-run-updates\" | sudo tee --append /home/ec2-user/eddyCFN.log && sudo /usr/local/bin/run-updates.sh"
               waitAfterCompletion: '0'
             020-run-updates:
-              command: "echo \"$(date) - 020-install-ansible\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/install-ansible.sh"
+              command: "echo \"$(date) - 020-install-ansible\" | sudo tee --append /home/ec2-user/eddyCFN.log && sudo /usr/local/bin/install-ansible.sh"
               waitAfterCompletion: '0'
             998-script-end-log:
               command: "echo \"$(date) - 998-script-end-log\" | sudo tee --append /home/ec2-user/eddyCFN.log"

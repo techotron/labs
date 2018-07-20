@@ -239,8 +239,11 @@ Resources:
               owner: "root"
               group: "root"
           commands:
-            010-script-start:
-              command: "echo \"$(date) - this is a test from cfn\" | sudo tee --append /home/ec2-user/eddyCFN.log"
+            000-script-start:
+              command: "echo \"$(date) - 000-script-start\" | sudo tee --append /home/ec2-user/eddyCFN.log"
+              waitAfterCompletion: '0'
+            998-script-end-log:
+              command: "echo \"$(date) - 998-script-end-log\" | sudo tee --append /home/ec2-user/eddyCFN.log"
               waitAfterCompletion: '0'
             999-signal-complete:
               command: !Join
@@ -350,9 +353,33 @@ Resources:
               mode: "000400"
               owner: "root"
               group: "root"
+            /usr/local/bin/run-updates.sh:
+              content: !Sub |
+                #!/bin/bash
+                sudo yum install –y epel-release
+                sudo yum update
+              mode: "000400"
+              owner: "root"
+              group: "root"
+            /usr/local/bin/install-ansible.sh:
+              content: !Sub |
+                #!/bin/bash
+                sudo yum install –y ansible
+              mode: "000400"
+              owner: "root"
+              group: "root"
           commands:
-            010-script-start:
-              command: "echo \"$(date) - this is a test from cfn\" | sudo tee --append /home/ec2-user/eddyCFN.log"
+            000-script-start:
+              command: "echo \"$(date) - 000-script-start\" | sudo tee --append /home/ec2-user/eddyCFN.log"
+              waitAfterCompletion: '0'
+            010-run-updates:
+              command: "echo \"$(date) - 010-run-updates\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/run-updates.sh"
+              waitAfterCompletion: '0'
+            020-run-updates:
+              command: "echo \"$(date) - 020-install-ansible\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/install-ansible.sh"
+              waitAfterCompletion: '0'
+            998-script-end-log:
+              command: "echo \"$(date) - 998-script-end-log\" | sudo tee --append /home/ec2-user/eddyCFN.log"
               waitAfterCompletion: '0'
             999-signal-complete:
               command: !Join

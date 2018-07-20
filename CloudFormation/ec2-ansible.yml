@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: single windows server instance
+Description: deploy an ansible playground
 
 Parameters:
   keyName:
@@ -8,7 +8,7 @@ Parameters:
     Type: String
 
   vpcStackName:
-    Description: Name of the vpc stack in which to deploy the cluster
+    Description: Name of the vpc stack in which to deploy the instances
     Type: String
 
   stackName:
@@ -28,39 +28,51 @@ Parameters:
     Type: String
 
 Resources:
-  jumpboxInstance:
+  ansibleServer:
     Type: AWS::EC2::Instance
     Metadata:
       AWS::CloudFormation::Init:
         config:
           files:
-            c:\tools\change-admin-password.ps1:
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
               content: !Sub |
-                param(
-                  [string] $adminPassword
-                )
-
-                & c:\tools\write-event-log.ps1 -message "Changing Administrator password..."
-                $Admin = [adsi]("WinNT://$env:ComputerName/Administrator, user")
-                $Admin.Invoke("SetPassword", $adminPassword)
-
-                if (!($?)) {
-
-                  & c:\tools\write-event-log.ps1 -message "Failed to set administrator password!" -eType Error
-
-                } else {
-
-                  & c:\tools\write-event-log.ps1 -message "Successfully set administrator password"
-
-                }
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.autoScalingGroup.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource autoScalingGroup --region ${AWS::Region}
+                runas=root
+              mode: "000400"
+              owner: "root"
+              group: "root"
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackName}
+                region=${AWS::Region}
+                interval=1
+              mode: "000400"
+              owner: "root"
+              group: "root"
           commands:
-            010-set-admin-password:
+            010-script-start:
+              command: "echo \"$(date) - this is a test from cfn\" | sudo tee --append /home/ec2-user/eddyCFN.log"
+              waitAfterCompletion: '0'
+            999-signal-complete:
               command: !Join
                 - ''
-                - - 'powershell.exe -executionpolicy unrestricted -command "& c:\tools\change-admin-password.ps1 -adminPassword '
-                  - Ref: adminPassword
-                  - '"'
+                - - '/opt/aws/bin/cfn-signal -e $? -r "call to 999-signal-complete" '
+                  - !Base64
+                    Ref: ec2VMUpdateWaitHandle
+              ignoreErrors: true
               waitAfterCompletion: 0
+          services:
+            sysvinit:
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
     Properties:
       InstanceType: !Ref instanceType
       KeyName: !Ref keyName
@@ -78,7 +90,7 @@ Resources:
           - - "<script>\r\n"
             - 'cfn-init.exe -v -s '
             - !Ref 'AWS::StackId'
-            - ' -r jumpboxInstance'
+            - ' -r ansibleServer'
             - ' --region '
             - !Ref 'AWS::Region'
             - "\r\n"
@@ -92,14 +104,14 @@ Outputs:
   publicDns:
     Description: Public DNS record for the Jumpbox instance
     Value:
-      Fn::GetAtt: [ jumpboxInstance, PublicDnsName ]
+      Fn::GetAtt: [ ansibleServer, PublicDnsName ]
     Export:
       Name: !Join [ "-", [ !Ref stackName, "jumpbox", "publicDns" ]]
 
   publicIp:
     Description: Public IP address for the Jumpbox instance
     Value:
-      Fn::GetAtt: [ jumpboxInstance, PublicIp ]
+      Fn::GetAtt: [ ansibleServer, PublicIp ]
     Export:
       Name: !Join [ "-", [ !Ref stackName, "jumpbox", "publicIp" ]]
 

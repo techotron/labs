@@ -281,7 +281,7 @@ Resources:
         - !Ref loadBalancer
       Tags:
         - Key: Name
-          Value: !Join [ "-", [ !Ref stackName, "asg" ]]
+          Value: !Join [ "-", [ !Ref stackName, "node" ]]
           PropagateAtLaunch: 'true'
 
   scalingPolicy:
@@ -293,9 +293,41 @@ Resources:
       AutoScalingGroupName: !Ref autoScalingGroup
       ScalingAdjustment: 1
 
-  ansibleServer:
-    Type: AWS::EC2::Instance
+  ansibleAutoScalingLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !Ref ec2Image
+      IamInstanceProfile: !Ref ssmInstanceProfile
+      InstanceType: !Ref ansibleInstanceType
+      KeyName: !Ref keyName
+      SecurityGroups:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "externalssh-securitygroup" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "webtraffic-securitygroup" ]]
+      UserData: !Base64
+        'Fn::Join':
+          - ''
+          - - |
+              #!/bin/bash -xe
+            - |
+              # run init scripts
+            - '/opt/aws/bin/cfn-init -v '
+            - '         --stack '
+            - !Ref 'AWS::StackId'
+            - '         --resource ansibleAutoScalingGroup '
+            - '         --region '
+            - !Ref 'AWS::Region'
+            - |+
+
+  ansibleAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
     Metadata:
+      AWS::CloudFormation::Authentication:
+        s3AccessCreds:
+          type: S3
+          roleName: !Ref ssmRole
+          buckets:
+            - !Ref s3BuildBucket
       AWS::CloudFormation::Init:
         config:
           files:
@@ -318,30 +350,9 @@ Resources:
               mode: "000400"
               owner: "root"
               group: "root"
-            /usr/local/bin/ansible-install.sh:
-              content: !Sub |
-                #!/bin/bash
-                # Source: https://www.digitalocean.com/community/tutorials/how-to-install-and-configure-ansible-on-centos-7
-
-                sudo yum install -y epel-release
-                sudo yum install -y ansible
-
-              mode: "000755"
-            /root/home/pemToInject.pem:
-              source: !Ref pemToInject
-              authentication: s3AccessCreds
-              mode: "000400"
-              owner: "root"
-              group: "root"
           commands:
             010-script-start:
               command: "echo \"$(date) - this is a test from cfn\" | sudo tee --append /home/ec2-user/eddyCFN.log"
-              waitAfterCompletion: '0'
-            020-install-ansible:
-              command: "echo \"$(date) - 020-install-ansible\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/ansible-install.sh"
-              waitAfterCompletion: '0'
-            998-final-command-log:
-              command: "echo \"$(date) - 998-final-command-log\" | sudo tee --append /home/ec2-user/eddyCFN.log"
               waitAfterCompletion: '0'
             999-signal-complete:
               command: !Join
@@ -360,34 +371,35 @@ Resources:
                   - /etc/cfn/cfn-hup.conf
                   - /etc/cfn/hooks.d/cfn-auto-reloader.conf
     Properties:
-      InstanceType: !Ref ansibleInstanceType
-      KeyName: !Ref keyName
-      ImageId: !Ref ec2Image
-      NetworkInterfaces:
-        - DeleteOnTermination: 'true'
-          DeviceIndex: 0
-          SubnetId:
-            Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
-          GroupSet:
-            - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "externalssh-securitygroup" ]]
-      UserData: !Base64
-        'Fn::Join':
-          - ''
-          - - |
-              #!/bin/bash -xe
-            - |
-              # run init scripts
-            - '/opt/aws/bin/cfn-init -v '
-            - '         --stack '
-            - !Ref 'AWS::StackId'
-            - '         --resource ansibleServer '
-            - '         --region '
-            - !Ref 'AWS::Region'
-            - |+
+      AvailabilityZones:
+        - !Select
+          - '0'
+          - !GetAZs ''
+        - !Select
+          - '1'
+          - !GetAZs ''
+      VPCZoneIdentifier:
+# Place Instances into public subnet for now so I can SSH onto them easily. ES.
+#        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "private-subnet1" ]]
+#        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "private-subnet2" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet2" ]]
+      LaunchConfigurationName: !Ref ansibleAutoScalingLaunchConfig
+      MinSize: 1
+      MaxSize: 1
       Tags:
         - Key: Name
-          Value:
-            !Join [ "-", [ !Ref stackName, "server" ]]
+          Value: !Join [ "-", [ !Ref stackName, "server" ]]
+          PropagateAtLaunch: 'true'
+
+  ansibleScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      PolicyType: SimpleScaling
+      Cooldown: '60'
+      AutoScalingGroupName: !Ref ansibleAutoScalingGroup
+      ScalingAdjustment: 1
 
 Outputs:
   loadBalancerCname:
@@ -396,5 +408,4 @@ Outputs:
       Fn::GetAtt: [ loadBalancer, DNSName ]
     Export:
       Name: !Join [ "-", [ !Ref stackName, "loadBalancerCname" ]]
-
 

@@ -7,6 +7,7 @@ if ($awsAccount -eq "personal") {
     $deploymentBucket = "722777194664-eddy-scratch"
     $tagValueContact = "eddysnow@googlemail.com"
     $keyName = "eddy-lab@gmail.com"
+    $pemToInject = ""
 
 } else {
 
@@ -15,6 +16,7 @@ if ($awsAccount -eq "personal") {
     $deploymentBucket = "357128852511-eddy-scratch"
     $tagValueContact = "eddy.snow@intapp.com"
     $keyName = "eddy-scratch@intapp.com"
+    $pemToInject = "eddy-scratchintappcom.pem"
 
 }
 
@@ -46,4 +48,5 @@ if ($awsAccount -eq "personal") {
     -ec2AsgInstanceType t2.micro `
     -ec2AsgMultiAz False `
     -ec2AsgImage amzn-ami-hvm-*-x86_64-gp2* `
-    -confirmWhenStackComplete
+    -confirmWhenStackComplete `
+    -pemToInject $pemToInject

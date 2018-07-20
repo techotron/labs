@@ -23,6 +23,10 @@ Parameters:
     Description: ec2 instance type for ansible server
     Type: String
 
+  pemToInject:
+    Description: Pem file to inject into Ansible server to connect to nodes
+    Type: String
+
   multiAZ:
     Description: Flag for multi AZ environment
     AllowedValues:
@@ -314,9 +318,30 @@ Resources:
               mode: "000400"
               owner: "root"
               group: "root"
+            /usr/local/bin/ansible-install.sh:
+              content: !Sub |
+                #!/bin/bash
+                # Source: https://www.digitalocean.com/community/tutorials/how-to-install-and-configure-ansible-on-centos-7
+
+                sudo yum install -y epel-release
+                sudo yum install -y ansible
+
+              mode: "000755"
+            /root/home/pemToInject.pem:
+              source: !Ref pemToInject
+              authentication: s3AccessCreds
+              mode: "000400"
+              owner: "root"
+              group: "root"
           commands:
             010-script-start:
               command: "echo \"$(date) - this is a test from cfn\" | sudo tee --append /home/ec2-user/eddyCFN.log"
+              waitAfterCompletion: '0'
+            020-install-ansible:
+              command: "echo \"$(date) - 020-install-ansible\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/ansible-install.sh"
+              waitAfterCompletion: '0'
+            998-final-command-log:
+              command: "echo \"$(date) - 998-final-command-log\" | sudo tee --append /home/ec2-user/eddyCFN.log"
               waitAfterCompletion: '0'
             999-signal-complete:
               command: !Join
@@ -348,14 +373,17 @@ Resources:
       UserData: !Base64
         'Fn::Join':
           - ''
-          - - "<script>\r\n"
-            - 'cfn-init.exe -v -s '
+          - - |
+              #!/bin/bash -xe
+            - |
+              # run init scripts
+            - '/opt/aws/bin/cfn-init -v '
+            - '         --stack '
             - !Ref 'AWS::StackId'
-            - ' -r ansibleServer'
-            - ' --region '
+            - '         --resource ansibleServer '
+            - '         --region '
             - !Ref 'AWS::Region'
-            - "\r\n"
-            - </script>
+            - |+
       Tags:
         - Key: Name
           Value:

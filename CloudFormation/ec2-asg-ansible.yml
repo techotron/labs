@@ -355,17 +355,25 @@ Resources:
               group: "root"
             /usr/local/bin/run-updates.sh:
               content: !Sub |
-                #!/bin/bash
+                #!/bin/sh
+                sudo yum install –y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
                 sudo yum install –y epel-release
                 sudo yum update -y
+                sudo pip install --upgrade pip
               mode: "000755"
               owner: "root"
               group: "root"
             /usr/local/bin/install-ansible.sh:
               content: !Sub |
-                #!/bin/bash
-                sudo yum -y install ansible
+                #!/bin/sh
+                sudo pip install ansible
               mode: "000755"
+              owner: "root"
+              group: "root"
+            /root/keys/targetkey.pem:
+              source: !Ref pemToInject
+              authentication: s3AccessCreds
+              mode: "000400"
               owner: "root"
               group: "root"
           commands:

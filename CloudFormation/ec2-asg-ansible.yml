@@ -318,7 +318,10 @@ Resources:
               #!/bin/bash -xe
             - |
               # run init scripts
-            - '/opt/aws/bin/cfn-init -v '
+            - 'sudo apt-get update'
+            - 'sudo apt-get install -y python-pip'
+            - 'sudo pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz'
+            - 'cfn-init -v '
             - '         --stack '
             - !Ref 'AWS::StackId'
             - '         --resource ansibleAutoScalingGroup '
@@ -343,7 +346,7 @@ Resources:
                 [cfn-auto-reloader-hook]
                 triggers=post.update
                 path=Resources.autoScalingGroup.Metadata.AWS::CloudFormation::Init
-                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource autoScalingGroup --region ${AWS::Region}
+                action=cfn-init -v --stack ${AWS::StackId} --resource ansibleAutoScalingGroup --region ${AWS::Region}
                 runas=root
               mode: "000400"
               owner: "root"
@@ -397,7 +400,7 @@ Resources:
             999-signal-complete:
               command: !Join
                 - ''
-                - - '/opt/aws/bin/cfn-signal -e $? -r "call to 999-signal-complete" '
+                - - 'cfn-signal -e $? -r "call to 999-signal-complete" '
                   - !Base64
                     Ref: ec2VMUpdateWaitHandle
               ignoreErrors: true

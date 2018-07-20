@@ -315,12 +315,12 @@ Resources:
         'Fn::Join':
           - ''
           - - |
-              #!/bin/bash -xe
+              #!/bin/bash -x
             - |
               # run init scripts
-            - 'sudo apt-get update'
-            - 'sudo apt-get install -y python-pip'
-            - 'sudo pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz'
+            - 'sudo apt-get update && '
+            - 'sudo apt-get install -y python-pip && '
+            - 'sudo pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz && '
             - 'cfn-init -v '
             - '         --stack '
             - !Ref 'AWS::StackId'

@@ -360,10 +360,12 @@ Resources:
               mode: "000400"
               owner: "root"
               group: "root"
-            /usr/local/bin/install-ansible.sh:
+            /usr/local/bin/ansible-ec2-files.sh:
               content: !Sub |
-                #!/bin/sh
-                sudo apt-get install ansible
+                cd /etc/ansible
+                wget https://raw.githubusercontent.com/ansible/ansible/devel/contrib/inventory/ec2.py
+                wget https://raw.githubusercontent.com/ansible/ansible/devel/contrib/inventory/ec2.ini
+                sudo chmod +x /etc/ansible/ec2.py
               mode: "000755"
               owner: "root"
               group: "root"
@@ -378,7 +380,10 @@ Resources:
               command: "echo \"$(date) - 000-script-start\" | sudo tee --append /home/ubuntu/eddyCFN.log"
               waitAfterCompletion: '0'
             020-install-ansible:
-              command: "echo \"$(date) - 020-install-ansible\" | sudo tee --append /home/ubuntu/eddyCFN.log && sudo /usr/local/bin/install-ansible.sh"
+              command: "echo \"$(date) - 020-install-ansible\" | sudo tee --append /home/ubuntu/eddyCFN.log && sudo apt-get -y install ansible"
+              waitAfterCompletion: '0'
+            021-download-ansible-ec2-files:
+              command: "echo \"$(date) - 021-download-ansible-ec2-files\" | sudo tee --append /home/ubuntu/eddyCFN.log && sudo /usr/local/bin/ansible-ec2-files.sh"
               waitAfterCompletion: '0'
             998-script-end-log:
               command: "echo \"$(date) - 998-script-end-log\" | sudo tee --append /home/ubuntu/eddyCFN.log"

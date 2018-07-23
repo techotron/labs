@@ -380,7 +380,7 @@ Resources:
               command: "echo \"$(date) - 000-script-start\" | sudo tee --append /home/ubuntu/eddyCFN.log"
               waitAfterCompletion: '0'
             020-install-ansible:
-              command: "echo \"$(date) - 020-install-ansible\" | sudo tee --append /home/ubuntu/eddyCFN.log && sudo apt-get -y install ansible && sudo apt-get -y install python-boto3"
+              command: "echo \"$(date) - 020-install-ansible\" | sudo tee --append /home/ubuntu/eddyCFN.log && sudo apt-get -y install ansible && sudo apt-get -y install python-boto3 && pip install boto"
               waitAfterCompletion: '0'
             021-download-ansible-ec2-files:
               command: "echo \"$(date) - 021-download-ansible-ec2-files\" | sudo tee --append /home/ubuntu/eddyCFN.log && sudo /usr/local/bin/ansible-ec2-files.sh"

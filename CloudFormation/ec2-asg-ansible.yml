@@ -67,7 +67,7 @@ Parameters:
     Description: Secret Key to use with EC2.py
     Type: String
     NoEcho: True
-    
+
 Mappings:
   "multiAZ":
     "True":
@@ -369,17 +369,36 @@ Resources:
               mode: "000400"
               owner: "root"
               group: "root"
-            /usr/local/bin/ansible-ec2-files.sh:
+            /usr/local/bin/set-environment-variables.sh:
               content: !Sub |
-                cd /etc/ansible
-                wget https://raw.githubusercontent.com/ansible/ansible/devel/contrib/inventory/ec2.py
-                wget https://raw.githubusercontent.com/ansible/ansible/devel/contrib/inventory/ec2.ini
-                sudo chmod +x /etc/ansible/ec2.py
                 export ANSIBLE_HOSTS=/etc/ansible/ec2.py
                 export EC2_INI_PATH=/etc/ansible/ec2.ini
                 export AWS_ACCESS_KEY_ID='${accessKey}'
                 export AWS_SECRET_ACCESS_KEY='${secretKey}'
               mode: "000755"
+              owner: "root"
+              group: "root"
+            /usr/local/bin/change-configs.sh:
+              content: !Sub |
+                mv /etc/ansible/lab_ec2.py /etc/ansible/ec2.py
+                mv /etc/ansible/lab_ec2.ini /etc/ansible/ec2.ini
+                mv /etc/ansible/lab_ansible.cfg /etc/ansible/ansible.cfg
+              mode: "000755"
+              owner: "root"
+              group: "root"
+            /etc/ansible/lab_ec2.py:
+              source: https://raw.githubusercontent.com/techotron/labs/master/Ansible/Configs/lab_ec2.py
+              mode: "000755"
+              owner: "root"
+              group: "root"
+            /etc/ansible/lab_ec2.ini:
+              source: https://raw.githubusercontent.com/techotron/labs/master/Ansible/Configs/lab_ec2.ini
+              mode: "000644"
+              owner: "root"
+              group: "root"
+            /etc/ansible/lab_ansible.cfg:
+              source: https://raw.githubusercontent.com/techotron/labs/master/Ansible/Configs/lab_ansible.cfg
+              mode: "000644"
               owner: "root"
               group: "root"
             /home/ubuntu/.ssh/id_rsa:
@@ -395,8 +414,14 @@ Resources:
             020-install-ansible:
               command: "echo \"$(date) - 020-install-ansible\" | sudo tee --append /home/ubuntu/eddyCFN.log && sudo apt-get -y install ansible && sudo apt-get -y install python-boto3 && pip install boto"
               waitAfterCompletion: '0'
-            021-download-ansible-ec2-files:
-              command: "echo \"$(date) - 021-download-ansible-ec2-files\" | sudo tee --append /home/ubuntu/eddyCFN.log && sudo /usr/local/bin/ansible-ec2-files.sh"
+            021-set-environment-variables:
+              command: "echo \"$(date) - 021-set-environment-variables\" | sudo tee --append /home/ubuntu/eddyCFN.log && sudo /usr/local/bin/set-environment-variables.sh"
+              waitAfterCompletion: '0'
+            022-change-configs:
+              command: "echo \"$(date) - 022-change-configs\" | sudo tee --append /home/ubuntu/eddyCFN.log && sudo /usr/local/bin/change-configs.sh"
+              waitAfterCompletion: '0'
+            900-ansible-ping-nodes:
+              command: "ansible -m ping -u ec2-user all | sudo tee --append /home/ubuntu/eddyCFN.log"
               waitAfterCompletion: '0'
             998-script-end-log:
               command: "echo \"$(date) - 998-script-end-log\" | sudo tee --append /home/ubuntu/eddyCFN.log"

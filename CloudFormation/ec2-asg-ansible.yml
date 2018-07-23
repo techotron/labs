@@ -375,6 +375,11 @@ Resources:
                 export EC2_INI_PATH=/etc/ansible/ec2.ini
                 export AWS_ACCESS_KEY_ID='${accessKey}'
                 export AWS_SECRET_ACCESS_KEY='${secretKey}'
+
+                echo ANSIBLE_HOSTS=/etc/ansible/ec2.py | tee --append /etc/environment
+                echo EC2_INI_PATH=/etc/ansible/ec2.ini | tee --append /etc/environment
+                echo AWS_ACCESS_KEY_ID='${accessKey}' | tee --append /etc/environment
+                echo AWS_SECRET_ACCESS_KEY='${secretKey}' | tee --append /etc/environment
               mode: "000755"
               owner: "root"
               group: "root"

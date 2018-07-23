@@ -59,6 +59,15 @@ Parameters:
     Description: AMI for the ec2 instance
     Type: String
 
+  accessKey:
+    Description: Access Key to use with EC2.py
+    Type: String
+
+  secretKey:
+    Description: Secret Key to use with EC2.py
+    Type: String
+    NoEcho: True
+    
 Mappings:
   "multiAZ":
     "True":
@@ -368,15 +377,17 @@ Resources:
                 sudo chmod +x /etc/ansible/ec2.py
                 export ANSIBLE_HOSTS=/etc/ansible/ec2.py
                 export EC2_INI_PATH=/etc/ansible/ec2.ini
+                export AWS_ACCESS_KEY_ID='${accessKey}'
+                export AWS_SECRET_ACCESS_KEY='${secretKey}'
               mode: "000755"
               owner: "root"
               group: "root"
-            /root/keys/targetkey.pem:
+            /home/ubuntu/.ssh/id_rsa:
               source: !Ref pemToInject
               authentication: s3AccessCreds
               mode: "000400"
-              owner: "root"
-              group: "root"
+              owner: "ubuntu"
+              group: "ubuntu"
           commands:
             000-script-start:
               command: "echo \"$(date) - 000-script-start\" | sudo tee --append /home/ubuntu/eddyCFN.log"

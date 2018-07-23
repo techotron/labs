@@ -135,6 +135,14 @@ $ec2AnsibleAmiParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
 $ec2AnsibleAmiParam.ParameterKey = "ansibleAmi"
 $ec2AnsibleAmiParam.ParameterValue = ""
 
+$ec2AnsibleAccessKeyParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
+$ec2AnsibleAccessKeyParam.ParameterKey = "accessKey"
+$ec2AnsibleAccessKeyParam.ParameterValue = $awsAccessKey
+
+$ec2AnsibleSecretKeyParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
+$ec2AnsibleSecretKeyParam.ParameterKey = "secretKey"
+$ec2AnsibleSecretKeyParam.ParameterValue = $awsSecretKey
+
 $ec2MultiAzParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
 $ec2MultiAzParam.ParameterKey = "multiAZ"
 $ec2MultiAzParam.ParameterValue = $ec2AsgMultiAz
@@ -421,7 +429,7 @@ if ($components -contains "ansible") {
     $ec2AsgAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName $ec2AsgImage -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
     $ec2AnsibleAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName ubuntu-16.04 -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
         
-    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-ansible") -stackUrl $ansibleStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2AnsibleInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam, $ec2AnsiblePemToInjectParam, $ec2AnsibleAmiParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
+    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-ansible") -stackUrl $ansibleStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2AnsibleInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam, $ec2AnsiblePemToInjectParam, $ec2AnsibleAmiParam, $ec2AnsibleAccessKeyParam, $ec2AnsibleSecretKeyParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
     
     if ($confirmWhenStackComplete) {
 

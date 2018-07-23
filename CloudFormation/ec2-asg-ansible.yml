@@ -367,6 +367,7 @@ Resources:
                 wget https://raw.githubusercontent.com/ansible/ansible/devel/contrib/inventory/ec2.ini
                 sudo chmod +x /etc/ansible/ec2.py
                 export ANSIBLE_HOSTS=/etc/ansible/ec2.py
+                export EC2_INI_PATH=/etc/ansible/ec2.ini
               mode: "000755"
               owner: "root"
               group: "root"

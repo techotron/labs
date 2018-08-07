@@ -57,7 +57,6 @@ source <(kubectl completion bash)
 If you're running this as a Hyper-V VM, the Vitualbox installation will count as a nested hypervisor. This will require the following PowerShell command run on the Hyper-V host in order to 'trick' the VM that the BIOS has been configured to allow virtualisation
 ```
 Set-VMProcessor -VMName <VMName> -ExposeVirtualizationExtensions $true
-
 ```
 
 

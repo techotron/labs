@@ -47,8 +47,9 @@ sudo apt-get -y install bash-completion
 ```
 
 ## Add the following to ~/.bashrc (running in current shell session to enable completion in terminal immediately)
+```
 source <(kubectl completion bash)
-
+```
 
 
 

@@ -36,7 +36,9 @@ curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.28.2/minik
 ```
 
 ## Download kubectl binaries and move to local path
+```
 curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/releases/$(curl -s https://storage.googleapis.com/kubernetes-release/releases/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+```
 
 ## Install bash-completion
 

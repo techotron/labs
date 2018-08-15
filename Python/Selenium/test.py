@@ -16,13 +16,11 @@ browser = webdriver.Chrome('C:\Users\eddys\Documents\Programs\chromedriver.exe')
 
 browser.get('https://team-avengers.timedev.intapp.com/Reports')
 
-try:
-    emailTextBox = browser.find_element_by_id('email')
-    print('Found <%s> element with that class name!' % (emailTextBox.tag_name))
-    emailTextBox.click()
-    emailTextBox.send_keys('admin')
-    continueBtn = browser.find_element_by_id('kc-submit')
-    continueBtn.click()
-    
-except:
-    print('Was not able to find an element with that name.')
+# emailTextBox = browser.find_element_by_id('email')
+# emailTextBox.click()
+# emailTextBox.send_keys('peterw')
+
+browser.find_element_by_id('kc-submit').click()
+browser.find_element_by_id('username').send_keys('MYUSERNAME')
+browser.find_element_by_id('password').send_keys('MYPASSWORD')
+browser.find_element_by_id('kc-login').click()

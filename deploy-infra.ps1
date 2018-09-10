@@ -347,7 +347,7 @@ if ($components -contains "genericlinuxEc2Asg") {
 if ($components -contains "dockerlinuxEc2Asg") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-dockerlinuxEc2Asg")
-    $ec2AsgAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName $ec2AsgImage -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
+    $ec2AsgAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName "amzn-ami-hvm-*-x86_64-gp2*" -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
 
     & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-dockerlinuxEc2Asg") -stackUrl $dockerlinuxEc2AsgStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
     

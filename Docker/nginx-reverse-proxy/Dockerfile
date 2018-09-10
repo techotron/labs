@@ -1,3 +1,3 @@
 FROM nginx
 
-RUN yum install nginx-plus-module-lua
+RUN apt-get install nginx-plus-module-lua

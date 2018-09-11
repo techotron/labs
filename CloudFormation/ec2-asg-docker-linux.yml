@@ -67,22 +67,6 @@ Resources:
       Handle: !Ref ec2VMUpdateWaitHandle
       Timeout: '2400'
 
-  fileSystem0:
-    Type: AWS::EFS::FileSystem
-    Properties:
-      Encrypted: False
-      PerformanceMode: generalPurpose
-      ThroughputMode: bursting
-
-  fileSystemMount0:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId: !Ref fileSystem0
-      SecurityGroups:
-        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
-      SubnetId:
-        Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
-
   fileSystem1:
     Type: AWS::EFS::FileSystem
     Properties:
@@ -91,6 +75,15 @@ Resources:
       ThroughputMode: bursting
 
   fileSystemMount1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref fileSystem1
+      SecurityGroups:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
+      SubnetId:
+        Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
+
+  fileSystemMount2:
     Type: AWS::EFS::MountTarget
     Properties:
       FileSystemId: !Ref fileSystem1
@@ -270,8 +263,17 @@ Resources:
                 sudo yum install -y python2
                 sudo yum install -y python2-devel
                 sudo yum install -y python2-pip
+                sudo yum install -y amazon-efs-utils
                 sudo yum clean all
                 sudo yum -y update
+              mode: "000755"
+            /usr/local/bin/mount-efs.sh:
+              content: !Sub |
+                #!/bin/bash
+                if [ ! -d /efs ]; then
+                  sudo mkdir /efs
+                  sudo mount -t efs ${fileSystem1}:/ efs
+                fi
               mode: "000755"
             /usr/local/bin/docker-install.sh:
               content: !Sub |
@@ -289,6 +291,9 @@ Resources:
               waitAfterCompletion: '0'
             030-run-docker-install:
               command: "echo \"$(date) - 030-run-docker-install\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/docker-install.sh"
+              waitAfterCompletion: '0'
+            040-mount-efs:
+              command: "echo \"$(date) - 040-mount-efs\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/mount-efs.sh"
               waitAfterCompletion: '0'
             999-signal-complete:
               command: !Join

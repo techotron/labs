@@ -67,6 +67,38 @@ Resources:
       Handle: !Ref ec2VMUpdateWaitHandle
       Timeout: '2400'
 
+  fileSystem0:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: False
+      PerformanceMode: generalPurpose
+      ThroughputMode: bursting
+
+  fileSystemMount0:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref fileSystem0
+      SecurityGroups:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
+      SubnetId:
+        Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
+
+  fileSystem1:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: False
+      PerformanceMode: generalPurpose
+      ThroughputMode: bursting
+
+  fileSystemMount1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref fileSystem1
+      SecurityGroups:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
+      SubnetId:
+        Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet2" ]]
+
   loadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
     Properties:
@@ -244,7 +276,6 @@ Resources:
             /usr/local/bin/docker-install.sh:
               content: !Sub |
                 #!/bin/bash
-                sudo yum install –y docker
                 sudo yum install -y docker
                 sudo service docker start
                 sudo usermod -a -G docker ec2-user

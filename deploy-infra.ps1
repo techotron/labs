@@ -5,7 +5,7 @@
     [string] $awsAccessKey,
     [string] $awsSecretKey,
     [string] $region,
-    [ValidateSet("vpc","repository","ecscluster","windowsEc2Asg","genericlinuxEc2Asg","dockerlinuxEc2Asg","gitlablinuxEc2Asg","postgresrds","ansible")][array] $components,
+    [ValidateSet("vpc","repository","ecscluster","windowsEc2Asg","genericlinuxEc2Asg","dockerlinuxEc2Asg","gitlablinuxEc2Asg","postgresrds","ansible","k8sEc2Asg")][array] $components,
     [string] $stackStemName,
     [string] $deploymentBucket = "722777194664-eddy-scratch",
     [ValidateSet("t2.micro","t2.small","t2.medium","t2.large")][string] $ecsClusterInstanceType,
@@ -42,6 +42,7 @@ $dockerlinuxEc2AsgStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$st
 $gitlablinuxEc2AsgStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/ec2-asg-gitlab-linux.yml"
 $postgresRdsStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/rds-postgres-db.yml"
 $ansibleStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/ec2-asg-ansible.yml"
+$k8sStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/ec2-asg-k8s-linux.yml"
 
 $deploymentScriptsPath = "$gitPath\CloudFormation"
 
@@ -362,6 +363,31 @@ if ($components -contains "dockerlinuxEc2Asg") {
 } else {
 
     Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Skipping dockerlinuxEc2Asg Stack deployment..." -ForegroundColor darkyellow
+    
+}
+
+###################################################################################################################
+#--------------------- Deploy K8s Linux EC2 ASG -------------------------
+###################################################################################################################
+
+if ($components -contains "k8sEc2Asg") {
+
+    $stackNameParam.ParameterValue = $("$stackStemName-k8sEc2Asg")
+    $ec2AsgAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName "amzn-ami-hvm-*-x86_64-gp2*" -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
+
+    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-k8sEc2Asg") -stackUrl $k8sStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
+    
+    if ($confirmWhenStackComplete) {
+
+        Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Waiting for stack deployment to complete..." -ForegroundColor darkyellow
+        Wait-CFNStack -StackName $("$stackStemName-dockerlinuxEc2Asg") -Status CREATE_COMPLETE, UPDATE_COMPLETE -Region $region -AccessKey $awsAccessKey -SecretKey $awsSecretKey -Timeout 1800 -ErrorAction SilentlyContinue | Out-Null    
+        Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Stack deployment complete..." -ForegroundColor green
+
+    }
+
+} else {
+
+    Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Skipping k8sEc2Asg Stack deployment..." -ForegroundColor darkyellow
     
 }
 

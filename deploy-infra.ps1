@@ -227,7 +227,7 @@ Write-S3Object -BucketName $deploymentBucket -KeyPrefix git/$stackStemName -Recu
 if ($components -contains "vpc") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-vpc")
-    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -stackName $("$stackStemName-vpc") -stackUrl $vpcStackUrl -parameters $stackNameParam -tags $tagProduct, $tagProductComponentsVpc, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region
+    & ".\Scripts\Common\deploy\deploy-cfnstack.ps1" -stackName $("$stackStemName-vpc") -stackUrl $vpcStackUrl -parameters $stackNameParam -tags $tagProduct, $tagProductComponentsVpc, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region
     
     if ($confirmWhenStackComplete) {
 
@@ -250,7 +250,7 @@ if ($components -contains "vpc") {
 if ($components -contains "repository") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-ecsrepository")
-    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -stackName $("$stackStemName-ecsrepository") -stackUrl $ecsRepositoryStackUrl -parameters $stackNameParam -tags $tagProduct, $tagProductComponentsEcsRepository, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region
+    & ".\Scripts\Common\deploy\deploy-cfnstack.ps1" -stackName $("$stackStemName-ecsrepository") -stackUrl $ecsRepositoryStackUrl -parameters $stackNameParam -tags $tagProduct, $tagProductComponentsEcsRepository, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region
     
     if ($confirmWhenStackComplete) {
 
@@ -273,9 +273,9 @@ if ($components -contains "repository") {
 if ($components -contains "ecscluster") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-ecscluster")
-    $ecsClusterAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName $hostAmiName -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
+    $ecsClusterAmiParam.ParameterValue = $(& ".\Scripts\Common\deploy\get-latestami.ps1" -imageName $hostAmiName -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
 
-    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-ecscluster") -stackUrl $ecsClusterStackUrl -parameters $stackNameParam, $ecsVpcStackNameParam, $keyPairParam, $ecsClusterInstanceTypeParam, $ecsClusterSizeParam, $ecsClusterAmiParam -tags $tagProduct, $tagProductComponentsEcsCluster, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
+    & ".\Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-ecscluster") -stackUrl $ecsClusterStackUrl -parameters $stackNameParam, $ecsVpcStackNameParam, $keyPairParam, $ecsClusterInstanceTypeParam, $ecsClusterSizeParam, $ecsClusterAmiParam -tags $tagProduct, $tagProductComponentsEcsCluster, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
     
     if ($confirmWhenStackComplete) {
 
@@ -298,9 +298,9 @@ if ($components -contains "ecscluster") {
 if ($components -contains "windowsEc2Asg") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-windowsec2asg")
-    $ec2AsgAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName $ec2AsgImage -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
+    $ec2AsgAmiParam.ParameterValue = $(& ".\Scripts\Common\deploy\get-latestami.ps1" -imageName $ec2AsgImage -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
 
-    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-windowsec2asg") -stackUrl $windowsEc2AsgStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
+    & ".\Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-windowsec2asg") -stackUrl $windowsEc2AsgStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
     
     if ($confirmWhenStackComplete) {
 
@@ -323,9 +323,9 @@ if ($components -contains "windowsEc2Asg") {
 if ($components -contains "genericlinuxEc2Asg") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-genericlinuxEc2Asg")
-    $ec2AsgAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName $ec2AsgImage -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
+    $ec2AsgAmiParam.ParameterValue = $(& ".\Scripts\Common\deploy\get-latestami.ps1" -imageName $ec2AsgImage -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
 
-    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-genericlinuxEc2Asg") -stackUrl $genericlinuxEc2AsgStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
+    & ".\Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-genericlinuxEc2Asg") -stackUrl $genericlinuxEc2AsgStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
     
     if ($confirmWhenStackComplete) {
 
@@ -348,9 +348,9 @@ if ($components -contains "genericlinuxEc2Asg") {
 if ($components -contains "dockerlinuxEc2Asg") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-dockerlinuxEc2Asg")
-    $ec2AsgAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName "amzn-ami-hvm-*-x86_64-gp2*" -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
+    $ec2AsgAmiParam.ParameterValue = $(& ".\Scripts\Common\deploy\get-latestami.ps1" -imageName "amzn-ami-hvm-*-x86_64-gp2*" -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
 
-    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-dockerlinuxEc2Asg") -stackUrl $dockerlinuxEc2AsgStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
+    & ".\Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-dockerlinuxEc2Asg") -stackUrl $dockerlinuxEc2AsgStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
     
     if ($confirmWhenStackComplete) {
 
@@ -373,9 +373,9 @@ if ($components -contains "dockerlinuxEc2Asg") {
 if ($components -contains "k8sEc2Asg") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-k8sEc2Asg")
-    $ec2AsgAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName "amzn-ami-hvm-*-x86_64-gp2*" -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
+    $ec2AsgAmiParam.ParameterValue = $(& ".\Scripts\Common\deploy\get-latestami.ps1" -imageName "amzn-ami-hvm-*-x86_64-gp2*" -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
 
-    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-k8sEc2Asg") -stackUrl $k8sStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
+    & ".\Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-k8sEc2Asg") -stackUrl $k8sStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
     
     if ($confirmWhenStackComplete) {
 
@@ -398,14 +398,14 @@ if ($components -contains "k8sEc2Asg") {
 if ($components -contains "gitlablinuxEc2Asg") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-gitlablinuxEc2Asg")
-    $ec2AsgAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName $ec2AsgImage -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
+    $ec2AsgAmiParam.ParameterValue = $(& ".\Scripts\Common\deploy\get-latestami.ps1" -imageName $ec2AsgImage -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
 
-    $rdsUsernameParam.Value = $(& ".\PowerShell Scripts\Common\deploy\get-stackoutputvalue.ps1" -stackName $("$stackStemName-postgresrds") -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -exportName $("$stackStemName-postgresrds-rdsRootLogin-gitlabDb"))
-    $rdsPasswordParam.Value = $(& ".\PowerShell Scripts\Common\deploy\get-stackoutputvalue.ps1" -stackName $("$stackStemName-postgresrds") -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -exportName $("$stackStemName-postgresrds-rdsRootPassword-gitlabDb"))
-    $rdsEndpointPortParam.Value = $(& ".\PowerShell Scripts\Common\deploy\get-stackoutputvalue.ps1" -stackName $("$stackStemName-postgresrds") -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -exportName $("$stackStemName-postgresrds-rdsDatabaseEndpointPort-gitlabDb"))
-    $rdsEndpointAddressParam.Value = $(& ".\PowerShell Scripts\Common\deploy\get-stackoutputvalue.ps1" -stackName $("$stackStemName-postgresrds") -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -exportName $("$stackStemName-postgresrds-rdsDatabaseEndpoint-gitlabDb"))
+    $rdsUsernameParam.Value = $(& ".\Scripts\Common\deploy\get-stackoutputvalue.ps1" -stackName $("$stackStemName-postgresrds") -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -exportName $("$stackStemName-postgresrds-rdsRootLogin-gitlabDb"))
+    $rdsPasswordParam.Value = $(& ".\Scripts\Common\deploy\get-stackoutputvalue.ps1" -stackName $("$stackStemName-postgresrds") -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -exportName $("$stackStemName-postgresrds-rdsRootPassword-gitlabDb"))
+    $rdsEndpointPortParam.Value = $(& ".\Scripts\Common\deploy\get-stackoutputvalue.ps1" -stackName $("$stackStemName-postgresrds") -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -exportName $("$stackStemName-postgresrds-rdsDatabaseEndpointPort-gitlabDb"))
+    $rdsEndpointAddressParam.Value = $(& ".\Scripts\Common\deploy\get-stackoutputvalue.ps1" -stackName $("$stackStemName-postgresrds") -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -exportName $("$stackStemName-postgresrds-rdsDatabaseEndpoint-gitlabDb"))
     
-    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-gitlablinuxEc2Asg") -stackUrl $gitlablinuxEc2AsgStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam, $rdsUsernameParam, $rdsPasswordParam, $rdsEndpointPortParam, $rdsEndpointAddressParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
+    & ".\Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-gitlablinuxEc2Asg") -stackUrl $gitlablinuxEc2AsgStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam, $rdsUsernameParam, $rdsPasswordParam, $rdsEndpointPortParam, $rdsEndpointAddressParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
     
     if ($confirmWhenStackComplete) {
 
@@ -429,7 +429,7 @@ if ($components -contains "postgresrds") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-postgresrds")
     
-    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-postgresrds") -stackUrl $postgresRdsStackUrl -parameters $stackNameParam, $rdsVpcStackNameParam, $rdsDbSuffixParam, $rdsInstanceClassParam, $rdsRootLoginParam, $rdsRootPassParam, $rdsKmsKeyParam, $rdsSnapShotIdParam, $rdsMultiAzParam -tags $tagProduct, $tagProductComponentsRds, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
+    & ".\Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-postgresrds") -stackUrl $postgresRdsStackUrl -parameters $stackNameParam, $rdsVpcStackNameParam, $rdsDbSuffixParam, $rdsInstanceClassParam, $rdsRootLoginParam, $rdsRootPassParam, $rdsKmsKeyParam, $rdsSnapShotIdParam, $rdsMultiAzParam -tags $tagProduct, $tagProductComponentsRds, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
     
     if ($confirmWhenStackComplete) {
 
@@ -452,10 +452,10 @@ if ($components -contains "postgresrds") {
 if ($components -contains "ansible") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-ansible")
-    $ec2AsgAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName $ec2AsgImage -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
-    $ec2AnsibleAmiParam.ParameterValue = $(& ".\PowerShell Scripts\Common\deploy\get-latestami.ps1" -imageName ubuntu-16.04 -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
+    $ec2AsgAmiParam.ParameterValue = $(& ".\Scripts\Common\deploy\get-latestami.ps1" -imageName $ec2AsgImage -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
+    $ec2AnsibleAmiParam.ParameterValue = $(& ".\Scripts\Common\deploy\get-latestami.ps1" -imageName ubuntu-16.04 -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
         
-    & ".\PowerShell Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-ansible") -stackUrl $ansibleStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2AnsibleInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam, $ec2AnsiblePemToInjectParam, $ec2AnsibleAmiParam, $ec2AnsibleAccessKeyParam, $ec2AnsibleSecretKeyParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
+    & ".\Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-ansible") -stackUrl $ansibleStackUrl -parameters $stackNameParam, $ec2VpcStackNameParam, $keyPairParam, $ec2AsgInstanceTypeParam, $ec2AnsibleInstanceTypeParam, $ec2MultiAzParam, $ec2S3BuildBucketParam, $ec2AsgAmiParam, $ec2AsgScaleUpScheduleParam, $ec2AsgScaleDownScheduleParam, $ec2AnsiblePemToInjectParam, $ec2AnsibleAmiParam, $ec2AnsibleAccessKeyParam, $ec2AnsibleSecretKeyParam -tags $tagProduct, $tagProductComponentsEc2Asg, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
     
     if ($confirmWhenStackComplete) {
 

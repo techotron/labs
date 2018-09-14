@@ -108,9 +108,6 @@ Resources:
           Value: !Join [ "-", [ !Ref stackName, "tgt", "grp" ]]
         - Key: ProductComponents
           Value: targetgroup
-#      Targets:
-#        - Id: !Ref autoScalingGroup
-#          Port: 80
       TargetType: instance
       VpcId:
         Fn::ImportValue: !Ref vpcStackName
@@ -261,9 +258,24 @@ Resources:
               mode: "000400"
               owner: "root"
               group: "root"
+            /usr/local/bin/init-update.sh:
+              content: !Sub |
+                #!/bin/bash
+                sudo yum install –y epel-release
+                sudo yum install -y jq
+                sudo yum install -y python2
+                sudo yum install -y python2-devel
+                sudo yum install -y python2-pip
+                sudo yum install -y amazon-efs-utils
+                sudo yum clean all
+                sudo yum -y update
+              mode: "000755"
           commands:
             010-script-start:
               command: "echo \"$(date) - this is a test from cfn\" | sudo tee --append /home/ec2-user/eddyCFN.log"
+              waitAfterCompletion: '0'
+            020-run-updates:
+              command: "echo \"$(date) - 020-run-updates\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/init-update.sh"
               waitAfterCompletion: '0'
             999-signal-complete:
               command: !Join
@@ -300,8 +312,6 @@ Resources:
         Fn::FindInMap: [multiAZ, !Ref multiAZ, minInstancesInService]
       MaxSize:
         Fn::FindInMap: [multiAZ, !Ref multiAZ, maxInstancesInService]
-#      LoadBalancerNames:
-#        - !Ref loadBalancer
       TargetGroupARNs:
         - !Ref loadBalancerTargetGroup
       Tags:

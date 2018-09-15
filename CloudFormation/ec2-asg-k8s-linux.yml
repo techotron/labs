@@ -330,7 +330,7 @@ Resources:
 
 Outputs:
   loadBalancerCname:
-    Description: CNAME for internal ALB
+    Description: CNAME for ALB
     Value:
       Fn::GetAtt: [ loadBalancer, DNSName ]
     Export:

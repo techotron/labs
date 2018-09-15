@@ -85,20 +85,13 @@ Resources:
       Handle: !Ref ec2VMUpdateWaitHandle
       Timeout: '2400'
 
+############################ Load Balancer ######################################
   loadBalancer:
-    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      HealthCheck:
-        Target: 'TCP:80'
-        HealthyThreshold: '3'
-        UnhealthyThreshold: '5'
-        Interval: '30'
-        Timeout: '5'
-      LoadBalancerName: !Join [ "-", [ !Ref stackName, "elb" ]]
-      Listeners:
-        - LoadBalancerPort: '80'
-          InstancePort: '80'
-          Protocol: TCP
+      Type: application
+      IpAddressType: ipv4
+      Name: !Join [ "-", [ !Ref stackName, "alb" ]]
       Scheme: internet-facing
       Subnets:
 #        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "private-subnet1" ]]
@@ -109,9 +102,44 @@ Resources:
         - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "webtraffic-securitygroup" ]]
       Tags:
         - Key: Name
-          Value: !Join [ "-", [ !Ref stackName, "elb" ]]
+          Value: !Join [ "-", [ !Ref stackName, "alb" ]]
         - Key: ProductComponents
-          Value: elb
+          Value: alb
+
+############################ Target Group ######################################
+  loadBalancerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 5
+      HealthCheckPath: /index.html
+      HealthCheckPort: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 2
+      HealthyThresholdCount: 2
+      Matcher:
+        HttpCode: 200
+      Name: !Join [ "-", [ !Ref stackName, "tgt", "grp" ]]
+      Port: 80
+      Protocol: HTTP
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref stackName, "tgt", "grp" ]]
+        - Key: ProductComponents
+          Value: targetgroup
+      TargetType: instance
+      VpcId:
+        Fn::ImportValue: !Ref vpcStackName
+
+############################ ALB Listener ######################################
+  loadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref loadBalancerTargetGroup
+      LoadBalancerArn: !Ref loadBalancer
+      Port: 80
+      Protocol: HTTP
 
   ssmInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -410,8 +438,8 @@ Resources:
         Fn::FindInMap: [multiAZ, !Ref multiAZ, minInstancesInService]
       MaxSize:
         Fn::FindInMap: [multiAZ, !Ref multiAZ, maxInstancesInService]
-      LoadBalancerNames:
-        - !Ref loadBalancer
+      TargetGroupARNs:
+        - !Ref loadBalancerTargetGroup
       Tags:
         - Key: Name
           Value: !Join [ "-", [ !Ref stackName, "asg" ]]
@@ -428,7 +456,7 @@ Resources:
 
 Outputs:
   loadBalancerCname:
-    Description: CNAME for internal ELB
+    Description: CNAME for ALB
     Value:
       Fn::GetAtt: [ loadBalancer, DNSName ]
     Export:

@@ -1,5 +1,4 @@
 #!/bin/bash
-# Script by Edward Snow
 # Source for instructions: https://github.com/kubernetes/kops/blob/master/docs/aws.md
 
 DISTRO=$(awk -F= '/^NAME/{print $2}' /etc/os-release | tr "[:upper:]" "[:lower:]" | tr -d '"')
@@ -16,13 +15,14 @@ if [ "$HOST" == "EDDY-LAPTOP1" ]; then
     AWS_REGION="eu-west-1"
     KOPS_IAM_USER="kops-eddy"
 else
-    AWS_ACCESSKEY=${THIS_SHOULD_BE_A_SUB_IN_CFN}
-    AWS_SECRETKEY=${THIS_SHOULD_BE_A_SUB_IN_CFN}
-    AWS_REGION=${THIS_SHOULD_BE_A_SUB_IN_CFN}
-    KOPS_IAM_USER=${THIS_SHOULD_BE_A_SUB_IN_CFN}
+    AWS_ACCESSKEY=$(aws cloudformation describe-stacks --stack-name k8s-kops-k8s-iam | jq -r '.Stacks[0].Outputs[]|select(.OutputKey=="kopsUserAccessKey").OutputValue')
+    AWS_SECRETKEY=$(aws cloudformation describe-stacks --stack-name k8s-kops-k8s-iam | jq -r '.Stacks[0].Outputs[]|select(.OutputKey=="kopsUserSecretKey").OutputValue')
+    AWS_REGION=$(aws configure get region)
+    KOPS_IAM_USER=$(aws cloudformation describe-stacks --stack-name k8s-kops-k8s-iam | jq -r '.Stacks[0].Outputs[]|select(.OutputKey=="kopsUserName").OutputValue')
 fi
 
 echo "Creating default AWS credentials file..."
+if [ "$HOST" == "EDDY-LAPTOP1" ]; then
 sudo [ -d ~/.aws ] || mkdir ~/.aws
 sudo cat >~/.aws/credentials <<EOL
 [default]
@@ -30,22 +30,9 @@ aws_access_key_id = $AWS_ACCESSKEY
 aws_secret_access_key = $AWS_SECRETKEY
 region = $AWS_REGION
 EOL
-
-echo "Creating IAM creation script..."
-sudo cat >~/kops-iam.sh <<EOL
-sudo aws iam create-group --group-name $KOPS_IAM_USER
-sudo aws iam attach-group-policy --policy-arn arn:aws:iam::aws:policy/AmazonEC2FullAccess --group-name $KOPS_IAM_USER
-sudo aws iam attach-group-policy --policy-arn arn:aws:iam::aws:policy/AmazonRoute53FullAccess --group-name $KOPS_IAM_USER
-sudo aws iam attach-group-policy --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess --group-name $KOPS_IAM_USER
-sudo aws iam attach-group-policy --policy-arn arn:aws:iam::aws:policy/IAMFullAccess --group-name $KOPS_IAM_USER
-sudo aws iam attach-group-policy --policy-arn arn:aws:iam::aws:policy/AmazonVPCFullAccess --group-name $KOPS_IAM_USER
-sudo aws iam create-user --user-name $KOPS_IAM_USER
-sudo aws iam add-user-to-group --user-name $KOPS_IAM_USER --group-name $KOPS_IAM_USER
-sudo aws iam create-access-key --user-name $KOPS_IAM_USER
-EOL
-
-echo "Chmod-ing IAM creation script to execute..."
-sudo chmod +x ~/kops-iam.sh
+else
+    echo "EC2 instance - credentials file already exists..."
+fi
 
 echo "Starting installation..."
 if [ "$DISTRO" == "ubuntu" ]; then
@@ -69,25 +56,6 @@ if [ "$DISTRO" == "ubuntu" ]; then
 elif [ "$DISTRO" == "centos" ]; then
     echo "centos"
 fi
-
-echo "Create new KOPS IAM account..."
-sudo ~/kops-iam.sh > kops-iam.json
-
-echo "Change default aws credential file to use new KOPS account..."
-unset AWS_ACCESSKEY
-unset AWS_SECRETKEY
-AWS_ACCESSKEY=$(cat ~/kops-iam.json | jq -r '.AccessKey.AccessKeyId' | grep -v "null")
-AWS_SECRETKEY=$(cat ~/kops-iam.json | jq -r '.AccessKey.SecretAccessKey' | grep -v "null")
-
-sudo cat >~/.aws/credentials <<EOL
-[default]
-aws_access_key_id = $AWS_ACCESSKEY
-aws_secret_access_key = $AWS_SECRETKEY
-region = $AWS_REGION
-EOL
-
-AWS_ACCESS_KEY_ID=$(aws configure get aws_access_key_id)
-AWS_SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key)
 
 echo "Create S3 bucket to store cluster state..."
 sudo aws s3api create-bucket --bucket eddy-kops-test-state-store --region us-east-1

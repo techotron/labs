@@ -1,4 +1,5 @@
 ﻿$awsAccount = "asds"
+$region = "eu-west-1"
 
 if ($awsAccount -eq "personal") {
 
@@ -17,16 +18,33 @@ if ($awsAccount -eq "personal") {
     $keyName = "eddy-scratch@intapp.com"
 
 }
-    
+
 & "$env:userprofile\git\labs\deploy-infra.ps1" `
     -gitPath "$env:userprofile\git\labs" `
     -tagValueProduct "lab" `
     -tagValueContact $tagValueContact `
     -awsAccessKey $awsAccessKey `
     -awsSecretKey $awsSecretKey `
-    -region "eu-west-1" `
-    -components k8s-kops `
+    -region $region `
+    -components vpc `
     -stackStemName "k8s" `
     -deploymentBucket $deploymentBucket `
     -keyName $keyName `
     -confirmWhenStackComplete
+        
+& "$env:userprofile\git\labs\deploy-infra.ps1" `
+    -gitPath "$env:userprofile\git\labs" `
+    -tagValueProduct "lab" `
+    -tagValueContact $tagValueContact `
+    -awsAccessKey $awsAccessKey `
+    -awsSecretKey $awsSecretKey `
+    -region $region `
+    -components k8s-kops `
+    -stackStemName "k8s" `
+    -deploymentBucket $deploymentBucket `
+    -keyName $keyName `
+    -confirmWhenStackComplete `
+    -ec2InstanceType t2.micro
+
+sleep -Seconds 5
+& "$env:userprofile\git\labs\Scripts\Common\tools\quick-putty-logon.ps1" -stackName k8s-kops-k8s-installer -LogicalResourceId kopsInstaller -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -resourceType singleEc2Instance

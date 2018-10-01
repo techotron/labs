@@ -24,7 +24,8 @@
     [ValidateSet("True","False")][string] $rdsMultiAz,
     [ValidateSet("t2.micro","t2.small","t2.medium","t2.large")][string] $ec2AnsibleInstanceType,
     [string] $pemToInject,
-    [string] $iamResourcePrefix = "eddy"
+    [string] $iamResourcePrefix = "eddy",
+    [ValidateSet("t2.micro","t2.small","t2.medium","t2.large")][string] $ec2InstanceType
 )
 
 Set-Location $gitPath
@@ -45,6 +46,7 @@ $postgresRdsStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackSte
 $ansibleStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/ec2-asg-ansible.yml"
 $k8sStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/ec2-asg-k8s-linux.yml"
 $k8sIamStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/kops-iam.yml"
+$k8sKopsInstallerStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/kops-installer.yml"
 
 $deploymentScriptsPath = "$gitPath\CloudFormation"
 
@@ -73,6 +75,10 @@ $tagProductComponentsEcsCluster.Value = "ecscluster"
 $tagProductComponentsEc2Asg = New-Object Amazon.CloudFormation.Model.Tag
 $tagProductComponentsEc2Asg.Key = "ProductComponents"
 $tagProductComponentsEc2Asg.Value = "ec2asg"
+
+$tagProductComponentsEc2 = New-Object Amazon.CloudFormation.Model.Tag
+$tagProductComponentsEc2.Key = "ProductComponents"
+$tagProductComponentsEc2.Value = "ec2"
 
 $tagProductComponentsRds = New-Object Amazon.CloudFormation.Model.Tag
 $tagProductComponentsRds.Key = "ProductComponents"
@@ -225,6 +231,26 @@ $kopsGroupNameParam.ParameterValue = $iamResourcePrefix
 $kopsUserNameParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
 $kopsUserNameParam.ParameterKey = "kopsUserName"
 $kopsUserNameParam.ParameterValue = $iamResourcePrefix
+
+$singleEc2InstanceTypeParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
+$singleEc2InstanceTypeParam.ParameterKey = "instanceType"
+$singleEc2InstanceTypeParam.ParameterValue = $ec2InstanceType
+
+$singleEc2AmiParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
+$singleEc2AmiParam.ParameterKey = "linuxImage"
+$singleEc2AmiParam.ParameterValue = ""
+
+$kopsFullUserNameParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
+$kopsFullUserNameParam.ParameterKey = "kopsFullUsername"
+$kopsFullUserNameParam.ParameterValue = ""
+
+$kopsAccessKeyParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
+$kopsAccessKeyParam.ParameterKey = "kopsAccessKey"
+$kopsAccessKeyParam.ParameterValue = ""
+
+$kopsSecretKeyParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
+$kopsSecretKeyParam.ParameterKey = "kopsSecretKey"
+$kopsSecretKeyParam.ParameterValue = ""
 
 ###################################################################################################################
 #----------------- Upload Deploy Scripts to S3 to simulate Jenkins build doing the same --------------
@@ -492,16 +518,26 @@ if ($components -contains "ansible") {
 if ($components -contains "k8s-kops") {
 
     $stackNameParam.ParameterValue = $("$stackStemName-kops-k8s-iam")
-        
+    $singleEc2AmiParam.ParameterValue = $(& ".\Scripts\Common\deploy\get-latestami.ps1" -imageName ubuntu-16.04 -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region)
+    
+    # Deploy the IAM account needed to deploy K8s using KOPs:    
     & ".\Scripts\Common\deploy\deploy-cfnstack.ps1" -stackName $("$stackStemName-kops-k8s-iam") -stackUrl $k8sIamStackUrl -parameters $stackNameParam, $kopsGroupNameParam, $kopsUserNameParam -tags $tagProduct, $tagProductComponentsIam, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
     
-    if ($confirmWhenStackComplete) {
+    # Wait for IAM stack to complete before gathering outputs:
+    Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Waiting for stack deployment to complete..." -ForegroundColor darkyellow
+    Wait-CFNStack -StackName $("$stackStemName-kops-k8s-iam") -Status CREATE_COMPLETE, UPDATE_COMPLETE -Region $region -AccessKey $awsAccessKey -SecretKey $awsSecretKey -Timeout 1800 -ErrorAction SilentlyContinue | Out-Null    
+    Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Stack deployment complete..." -ForegroundColor green
+        
+    $kopsFullUserNameParam.ParameterValue = & ".\Scripts\Common\deploy\get-stackoutputvalue.ps1" -stackName $("$stackStemName-kops-k8s-iam") -exportName $("$stackStemName-kops-k8s-iam" + "-kopsUsername") -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region
+    $kopsAccessKeyParam.ParameterValue = & ".\Scripts\Common\deploy\get-stackoutputvalue.ps1" -stackName $("$stackStemName-kops-k8s-iam") -exportName $("$stackStemName-kops-k8s-iam" + "-kopsUserAccessKey") -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region
+    $kopsSecretKeyParam.ParameterValue = & ".\Scripts\Common\deploy\get-stackoutputvalue.ps1" -stackName $("$stackStemName-kops-k8s-iam") -exportName $("$stackStemName-kops-k8s-iam" + "-kopsUserSecretKey") -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region
 
-        Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Waiting for stack deployment to complete..." -ForegroundColor darkyellow
-        Wait-CFNStack -StackName $("$stackStemName-kops-k8s-iam") -Status CREATE_COMPLETE, UPDATE_COMPLETE -Region $region -AccessKey $awsAccessKey -SecretKey $awsSecretKey -Timeout 1800 -ErrorAction SilentlyContinue | Out-Null    
-        Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Stack deployment complete..." -ForegroundColor green
+    # Deploy the installer instance after waiting for the VPC stack to complete:
+    & ".\Scripts\Common\deploy\deploy-cfnstack.ps1" -waitForStackName $("$stackStemName-vpc") -stackName $("$stackStemName-kops-k8s-installer") -stackUrl $k8sKopsInstallerStackUrl -parameters $stackNameParam, $ecsVpcStackNameParam, $keyPairParam, $singleEc2InstanceTypeParam, $singleEc2AmiParam, $kopsFullUserNameParam, $kopsAccessKeyParam, $kopsSecretKeyParam -tags $tagProduct, $tagProductComponentsEc2, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
 
-    }
+    Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Waiting for stack deployment to complete..." -ForegroundColor darkyellow
+    Wait-CFNStack -StackName $("$stackStemName-kops-k8s-installer") -Status CREATE_COMPLETE, UPDATE_COMPLETE -Region $region -AccessKey $awsAccessKey -SecretKey $awsSecretKey -Timeout 1800 -ErrorAction SilentlyContinue | Out-Null    
+    Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Stack deployment complete..." -ForegroundColor green
 
 } else {
 

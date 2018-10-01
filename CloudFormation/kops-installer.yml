@@ -1,0 +1,131 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Instance to run KOPS installer scripts
+
+Parameters:
+  keyName:
+    Description: Key pair to use for instances
+    Type: String
+
+  vpcStackName:
+    Description: Name of the vpc stack in which to deploy the cluster
+    Type: String
+
+  stackName:
+    Description: Name of the stack to distinguish it from other stacks
+    Type: String
+
+  instanceType:
+    Description: ec2 instance type
+    Type: String
+
+  linuxImage:
+    Description: AMI for the ec2 instance
+    Type: String
+
+  userDataUpdateTrick:
+    Description: Trick used to always kick off the scripts
+    Type: String
+    Default: static
+
+  kopsFullUsername:
+    Description: Full username for the kops user
+    Type: String
+
+  kopsAccessKey:
+    Description: Access Key for the kops IAM user
+    Type: String
+
+  kopsSecretKey:
+    Description: Secret access key for the kops IAM user
+    Type: String
+    NoEcho: true
+
+Resources:
+  kopsInstaller:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          files:
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.autoScalingGroup.Metadata.AWS::CloudFormation::Init
+                action=cfn-init -v --stack ${AWS::StackId} --resource kopsInstaller --region ${AWS::Region}
+                runas=root
+              mode: "000400"
+              owner: "root"
+              group: "root"
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackName}
+                region=${AWS::Region}
+                interval=1
+              mode: "000400"
+              owner: "root"
+              group: "root"
+            /usr/local/bin/kops-install.sh:
+              source: https://raw.githubusercontent.com/techotron/labs/master/Scripts/K8s%20Install/kops-install.sh
+              mode: "000755"
+              owner: "root"
+              group: "root"
+            /home/ubuntu/.aws/credentials:
+              content: !Sub |
+                [default]
+                aws_access_key_id = ${kopsAccessKey}
+                aws_secret_access_key = ${kopsSecretKey}
+                region = ${AWS::Region}
+              mode: "000400"
+              owner: "root"
+              group: "root"
+          commands:
+            100-run-kops-install:
+              command: "sudo /usr/local/bin/kops-install.sh"
+          services:
+            sysvinit:
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+    Properties:
+      InstanceType: !Ref instanceType
+      KeyName: !Ref keyName
+      ImageId: !Ref linuxImage
+      NetworkInterfaces:
+        - DeleteOnTermination: 'true'
+          DeviceIndex: 0
+          SubnetId:
+            Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
+          GroupSet:
+            - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "externalssh-securitygroup" ]]
+      UserData: !Base64
+        'Fn::Join':
+          - ''
+          - - |
+              #!/bin/bash -x
+            - |
+              # run init scripts
+            - |
+              # run init scripts
+            - 'sudo apt-get update && '
+            - 'sudo apt-get -y install awscli && '
+            - 'sudo apt-get -y install jq && '
+            - 'sudo apt-get install -y python-pip && '
+            - 'sudo pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz && '
+            - 'cfn-init -v '
+            - ' --stack '
+            - !Ref 'AWS::StackId'
+            - ' --resource kopsInstaller '
+            - ' --region '
+            - !Ref 'AWS::Region'
+            - |+
+      Tags:
+        - Key: Name
+          Value:
+            !Join [ "-", [ "time", !Ref stackName, "kopsInstaller" ]]
+

@@ -29,6 +29,21 @@ Resources:
        - "arn:aws:iam::aws:policy/AmazonVPCFullAccess"
        - "arn:aws:iam::aws:policy/AmazonRoute53FullAccess"
 
+  kopsDescribeStackPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Join [ "", [ "kops.", !Ref stackName, ".policy@", !Ref "AWS::Region" ]]
+      Groups:
+        - !Ref kopsGroup
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Action:
+              - "cloudformation:DescribeStacks"
+            Resource: "*"
+
   kopsUser:
     Type: AWS::IAM::User
     Properties:
@@ -42,6 +57,12 @@ Resources:
       UserName: !Ref kopsUser
 
 Outputs:
+  kopsUserName:
+    Description: Kops username
+    Value: !Join [ "", [ "kops.", !Ref stackName, ".", !Ref kopsUserName, ".user@", !Ref "AWS::Region" ]]
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "kopsUserName" ]]
+
   kopsUserAccessKey:
     Description: Access key for the user
     Value: !Ref kopsUserAccessKey

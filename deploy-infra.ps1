@@ -5,7 +5,7 @@
     [string] $awsAccessKey,
     [string] $awsSecretKey,
     [string] $region,
-    [ValidateSet("vpc","repository","ecscluster","windowsEc2Asg","genericlinuxEc2Asg","dockerlinuxEc2Asg","gitlablinuxEc2Asg","postgresrds","ansible","k8sEc2Asg")][array] $components,
+    [ValidateSet("vpc","repository","ecscluster","windowsEc2Asg","genericlinuxEc2Asg","dockerlinuxEc2Asg","gitlablinuxEc2Asg","postgresrds","ansible","k8sEc2Asg","k8s-kops")][array] $components,
     [string] $stackStemName,
     [string] $deploymentBucket = "722777194664-eddy-scratch",
     [ValidateSet("t2.micro","t2.small","t2.medium","t2.large")][string] $ecsClusterInstanceType,
@@ -23,7 +23,8 @@
     [string] $rdsRootPass,
     [ValidateSet("True","False")][string] $rdsMultiAz,
     [ValidateSet("t2.micro","t2.small","t2.medium","t2.large")][string] $ec2AnsibleInstanceType,
-    [string] $pemToInject
+    [string] $pemToInject,
+    [string] $iamResourcePrefix = "eddy"
 )
 
 Set-Location $gitPath
@@ -43,6 +44,7 @@ $gitlablinuxEc2AsgStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$st
 $postgresRdsStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/rds-postgres-db.yml"
 $ansibleStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/ec2-asg-ansible.yml"
 $k8sStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/ec2-asg-k8s-linux.yml"
+$k8sIamStackUrl = "https://s3.amazonaws.com/$deploymentBucket/git/$stackStemName/kops-iam.yml"
 
 $deploymentScriptsPath = "$gitPath\CloudFormation"
 
@@ -75,6 +77,10 @@ $tagProductComponentsEc2Asg.Value = "ec2asg"
 $tagProductComponentsRds = New-Object Amazon.CloudFormation.Model.Tag
 $tagProductComponentsRds.Key = "ProductComponents"
 $tagProductComponentsRds.Value = "rds"
+
+$tagProductComponentsIam = New-Object Amazon.CloudFormation.Model.Tag
+$tagProductComponentsIam.Key = "ProductComponents"
+$tagProductComponentsIam.Value = "iam"
 
 $tagTeam = New-Object Amazon.CloudFormation.Model.Tag
 $tagTeam.Key = "Team"
@@ -211,6 +217,14 @@ $rdsEndpointPortParam.ParameterValue = ""
 $rdsEndpointAddressParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
 $rdsEndpointAddressParam.ParameterKey = "rdsEndpointAddress"
 $rdsEndpointAddressParam.ParameterValue = ""
+
+$kopsGroupNameParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
+$kopsGroupNameParam.ParameterKey = "kopsGroupName"
+$kopsGroupNameParam.ParameterValue = $iamResourcePrefix
+
+$kopsUserNameParam = New-Object -Type Amazon.CloudFormation.Model.Parameter
+$kopsUserNameParam.ParameterKey = "kopsUserName"
+$kopsUserNameParam.ParameterValue = $iamResourcePrefix
 
 ###################################################################################################################
 #----------------- Upload Deploy Scripts to S3 to simulate Jenkins build doing the same --------------
@@ -468,5 +482,29 @@ if ($components -contains "ansible") {
 } else {
 
     Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Skipping ansible Stack deployment..." -ForegroundColor darkyellow
+    
+}
+
+###################################################################################################################
+#--------------------- Deploy Kops K8s -------------------------
+###################################################################################################################
+
+if ($components -contains "k8s-kops") {
+
+    $stackNameParam.ParameterValue = $("$stackStemName-kops-k8s-iam")
+        
+    & ".\Scripts\Common\deploy\deploy-cfnstack.ps1" -stackName $("$stackStemName-kops-k8s-iam") -stackUrl $k8sIamStackUrl -parameters $stackNameParam, $kopsGroupNameParam, $kopsUserNameParam -tags $tagProduct, $tagProductComponentsIam, $tagTeam, $tagEnvironment, $tagContact -awsAccessKey $awsAccessKey -awsSecretKey $awsSecretKey -region $region -cfnWaitTimeOut 1800
+    
+    if ($confirmWhenStackComplete) {
+
+        Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Waiting for stack deployment to complete..." -ForegroundColor darkyellow
+        Wait-CFNStack -StackName $("$stackStemName-kops-k8s-iam") -Status CREATE_COMPLETE, UPDATE_COMPLETE -Region $region -AccessKey $awsAccessKey -SecretKey $awsSecretKey -Timeout 1800 -ErrorAction SilentlyContinue | Out-Null    
+        Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Stack deployment complete..." -ForegroundColor green
+
+    }
+
+} else {
+
+    Write-Host "[$((get-date).tostring('dd/MM/yy HH:mm:ss'))]" -foregroundcolor gray -nonewline; write-host " - Skipping kops-k8s Stack deployment..." -ForegroundColor darkyellow
     
 }

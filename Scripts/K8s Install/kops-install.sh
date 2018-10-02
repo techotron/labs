@@ -70,7 +70,7 @@ AWS_AZ1=$(aws ec2 describe-availability-zones | jq -r '.AvailabilityZones[1].Zon
 echo "Create KOPS secret key..."
 sudo kops create secret --name $KOPS_NAME --state $KOPS_STATE_STORE sshpublickey root -i ~/.ssh/id_rsa.pub
 echo "Create KOPS cluster config..."
-sudo kops create cluster --zones $AWS_AZ0,$AWS_AZ1 --name $KOPS_NAME --state $KOPS_STATE_STORE --node-count 3 --node-size t3.micro --master-size t3.small
+sudo kops create cluster --zones $AWS_AZ0,$AWS_AZ1 --name $KOPS_NAME --state $KOPS_STATE_STORE --node-count 3 --node-size t2.micro --master-size t2.small
 echo "Create KOPS cluster in AWS..."
 sudo kops update cluster --name $KOPS_NAME --state $KOPS_STATE_STORE --ssh-public-key ~/.ssh/id_rsa.pub --yes
 

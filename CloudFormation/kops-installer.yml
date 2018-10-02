@@ -72,6 +72,11 @@ Resources:
               mode: "000755"
               owner: "root"
               group: "root"
+            /usr/local/bin/helm-install.sh:
+              source: https://raw.githubusercontent.com/techotron/labs/master/Scripts/K8s%20Install/helm-install.sh
+              mode: "000755"
+              owner: "root"
+              group: "root"
             /home/ubuntu/.aws/credentials:
               content: !Sub |
                 [default]

@@ -39,7 +39,6 @@ Parameters:
   kopsSecretKey:
     Description: Secret access key for the kops IAM user
     Type: String
-    NoEcho: true
 
 Resources:
   kopsInstaller:

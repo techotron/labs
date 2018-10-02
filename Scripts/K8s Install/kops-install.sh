@@ -66,12 +66,11 @@ KOPS_NAME="eddy-kops.k8s.local"
 KOPS_STATE_STORE="s3://eddy-kops-test-state-store"
 AWS_AZ0=$(aws ec2 describe-availability-zones | jq -r '.AvailabilityZones[0].ZoneName')
 AWS_AZ1=$(aws ec2 describe-availability-zones | jq -r '.AvailabilityZones[1].ZoneName')
-MASTER_SEC_GROUP=$(aws cloudformation describe-stacks --stack-name k8s-vpc | jq -r '.Stacks[0].Outputs[]|select(.OutputKey=="externalSshSecurityGroup").OutputValue')
 
 echo "Create KOPS secret key..."
 sudo kops create secret --name $KOPS_NAME --state $KOPS_STATE_STORE sshpublickey root -i ~/.ssh/id_rsa.pub
 echo "Create KOPS cluster config..."
-sudo kops create cluster --zones $AWS_AZ0,$AWS_AZ1 --name $KOPS_NAME --state $KOPS_STATE_STORE --node-count 3 --node-size t2.small --master-size t2.small --master-security-groups $MASTER_SEC_GROUP
+sudo kops create cluster --zones $AWS_AZ0,$AWS_AZ1 --name $KOPS_NAME --state $KOPS_STATE_STORE --node-count 3 --node-size t3.micro --master-size t3.small
 echo "Create KOPS cluster in AWS..."
 sudo kops update cluster --name $KOPS_NAME --state $KOPS_STATE_STORE --ssh-public-key ~/.ssh/id_rsa.pub --yes
 

@@ -43,3 +43,8 @@ When the `EXTERNAL-IP` is no longer `<pending>`:
 ```buildoutcfg
 kubectl describe service traefik -n kube-system | grep Ingress | awk '{print $3}'
 ```
+
+Create ingress rule for traefik ui:
+```buildoutcfg
+kubectl apply -f https://raw.githubusercontent.com/techotron/labs/master/HelmCharts/Traefik/traefik-ui.yml
+```

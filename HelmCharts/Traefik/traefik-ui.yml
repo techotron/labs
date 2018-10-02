@@ -18,7 +18,7 @@ metadata:
   namespace: kube-system
 spec:
   rules:
-  - host: a09cf261ac63811e882900ae9f9d13a7-724276352.eu-west-1.elb.amazonaws.com
+  - host: a09cf261ac63811e882900ae9f9d13a7-724276352.eu-west-1.elb.amazonaws.com/
     http:
       paths:
       - path: /

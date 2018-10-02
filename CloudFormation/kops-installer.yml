@@ -83,8 +83,8 @@ Resources:
                 aws_secret_access_key = ${kopsSecretKey}
                 region = ${AWS::Region}
               mode: "000400"
-              owner: "root"
-              group: "root"
+              owner: "ubuntu"
+              group: "ubuntu"
           services:
             sysvinit:
               cfn-hup:

@@ -81,9 +81,6 @@ Resources:
               mode: "000400"
               owner: "root"
               group: "root"
-          commands:
-            100-run-kops-install:
-              command: "sudo /usr/local/bin/kops-install.sh"
           services:
             sysvinit:
               cfn-hup:

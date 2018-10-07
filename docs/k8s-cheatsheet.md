@@ -22,6 +22,11 @@ Delete deployment
 kubectl delete -n NAMESPACE deployment DEPLOYMENT
 ```
 
+List Replication Controllers
+```buildoutcfg
+kubectl get replicatecontrollers
+```
+
 # helm
 ## Install Traefik
 Search for helm chart

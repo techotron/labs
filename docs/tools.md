@@ -21,6 +21,11 @@ awless ls subnets
 awless ls securitygroups
 ```
 
+**List resources from local cache**
+```buildoutcfg
+awless ls instances --local
+```
+
 **Create instance**
 ```buildoutcfg
 awless create instance distro=amazonlinux:amzn2 type=t2.nano keypair=eddy-scratch@intapp.com name=eddy-awless-test subnet=subnet-02724e4b securitygroup=sg-10e7026c

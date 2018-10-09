@@ -12,3 +12,8 @@ Open LoadBalancer Service
 minikube service <service-name>
 ```
 
+## Dashboard
+Get the dashboard URL
+```buildoutcfg
+minikube dashboard
+```

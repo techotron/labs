@@ -7,9 +7,19 @@ List available nodes in cluster
 kubectl get nodes
 ```
 
+List pods with extra columns
+```buildoutcfg
+kubectl get pods -o wide
+```
+
 List pods from all namespaces
 ```buildoutcfg
 kubectl get pods --all-namespaces
+```
+
+Describe a specific pod in more detail
+```buildoutcfg
+kubectl describe pod <pod-name>
 ```
 
 List deployments
@@ -26,6 +36,24 @@ List Replication Controllers
 ```buildoutcfg
 kubectl get replicatecontrollers
 ```
+
+Scale application up/down (where N = integer)
+```buildoutcfg
+kubectl scale replicationcontroller <replication-controller-name> --replicas=N
+```
+
+#####Dashboard
+Get the k8s dashboard (GKE)
+```buildoutcfg
+kubectl cluster-info | grep dashboard
+```
+
+Get the username/password for the dashboard (GKE)
+```buildoutcfg
+gcloud container clusters describe <cluster-name> | grep -E "(username|password):"
+```
+
+**Note:** for getting the dashboard details in minikube, use the minikube-cheatsheet.md
 
 # helm
 ## Install Traefik

@@ -1,6 +1,25 @@
 # Command cheatsheet for K8s commands
 
 # kubectl
+## Login commands
+Change context to another 
+```buildoutcfg
+kubectl config use-context my-cluster-name
+```
+**Note:** The kubectl config file is typically found in ~/.kube/config and is in yaml format 
+
+Get jwt keycloak token to use for openid auth
+```buildoutcfg
+curl -X POST https://keycloak.example.com/auth/realms/master/protocol/openid-connect/token -d 'grant_type=password' -d 'client_id=SOME_STRING' -d 'client_secret=SOME_GUID' -d 'username=SOME_USERNAME' -d 'password=SOME_PASSWORD' -d 'scope=openid' -d 'response_type=id_token' > token
+```
+This will output the token to a file called `token` in the local directory. This can be parsed and used to authenticate with the master nodes by injecting it into the kubectl config file 
+
+Add jwt token to kubectl config
+```buildoutcfg
+kubectl config set-credentials SOME_NAME --auth-provider=oidc --auth-provider-arg=idp-issuer-url=https://keycloak.example.com/auth/realms/master --auth-provider-arg=client-id=SOME_STRING --auth-provider-arg=client-secret=SOME_GUID --auth-provider-arg=refresh-token=$(jq -r '.refresh_token' < token) --auth-provider-arg=id-token=$(jq -r '.id_token' < token)
+```
+This uses the token retrieved from the previous command and adds it to the kubectl config
+
 ## Administrative Commands
 List available nodes in cluster
 ```buildoutcfg

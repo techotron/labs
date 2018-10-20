@@ -1,0 +1,50 @@
+{
+  "variables": {
+    "aws_access_key": "{{env `AWS_ACCESS_KEY_ID`}}",
+    "aws_secret_key": "{{env `AWS_SECRET_ACCESS_KEY`}}",
+    "region":         "eu-west-1"
+  },
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "access_key": "{{ user `aws_access_key` }}",
+      "secret_key": "{{ user `aws_secret_key` }}",
+      "region": "{{ user `region` }}",
+      "instance_type": "t2.micro",
+      "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "*Windows_Server-2016-English-Full-Base*",
+          "root-device-type": "ebs"
+        },
+        "most_recent": true,
+        "owners": "amazon"
+      },
+      "ami_name": "windows-vanilla-std-{{timestamp}}",
+      "user_data_file": "./bootstrap_win.txt",
+      "communicator": "winrm",
+      "winrm_username": "Administrator",
+      "winrm_password": "SuperSecurePassword01!"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "powershell",
+      "environment_vars": ["EXAMPLE_VAR=test1"],
+      "inline": [
+        "Write-Host \"This is a variable: $Env:EXAMPLE_VAR\"",
+        "Write-Host \"Done\""
+      ]
+    },
+    {
+      "type": "windows-restart"
+    },
+    {
+      "script": "./init.ps1",
+      "type": "powershell",
+      "environment_vars": [
+        "SCRIPT_NAME=init.ps1"
+      ]
+    }
+  ]
+}

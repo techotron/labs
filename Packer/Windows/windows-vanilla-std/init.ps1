@@ -1,4 +1,4 @@
-$files = get-childitem c:\downloads
+$files = ()get-childitem c:\downloads).fullname
 
 write-host "Starting script: " $Env:SCRIPT_NAME
 

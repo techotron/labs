@@ -2,6 +2,7 @@
 
 # kubectl
 ## Login commands
+
 Change context to another 
 ```buildoutcfg
 kubectl config use-context my-cluster-name
@@ -21,6 +22,7 @@ kubectl config set-credentials SOME_NAME --auth-provider=oidc --auth-provider-ar
 This uses the token retrieved from the previous command and adds it to the kubectl config
 
 ## Administrative Commands
+
 List available nodes in cluster
 ```buildoutcfg
 kubectl get nodes
@@ -61,6 +63,56 @@ Scale application up/down (where N = integer)
 kubectl scale replicationcontroller <replication-controller-name> --replicas=N
 ```
 
+Viewing a pod's full descriptor
+```buildoutcfg
+kubectl get pod <pod_name> -o yaml
+kubectl get pod <pod_name> -o json
+```
+
+## Creating pods
+
+Create a pod from a manifest file
+```buildoutcfg
+kubectl create -f <./manifest_filename.yml>
+```
+
+## Networking
+
+Add port forward to a pod
+```buildoutcfg
+kubectl port-forward kubia-manual 8888:8080
+```
+**Note:** This is a handy way to test an individual pod
+
+## Logging
+
+**Note:** It's standard practise for container logs to std out and std err stream rather than files. Docker will typically redirect these stream to files, which you can retrieve with `docker logs <container_id>`.
+
+Container logs are automatically rotated daily and everytime the log file reaches 10MB. 
+
+View a pod's logs
+```buildoutcfg
+kubectl logs <pod_name>
+```
+**Note:** This only shows the logs from the last rotation.
+
+View a specific container's log within a pod
+```buildoutcfg
+kubectl logs <pod_nane> -c <container>
+```
+
+## Help Commands
+
+Detail pod config manifests
+```buildoutcfg
+kubectl explain pods
+```
+
+Detail pod config sub section
+```buildoutcfg
+kubectl explain pod.spec
+```
+
 #####Dashboard
 Get the k8s dashboard (GKE)
 ```buildoutcfg
@@ -75,7 +127,9 @@ gcloud container clusters describe <cluster-name> | grep -E "(username|password)
 **Note:** for getting the dashboard details in minikube, use the minikube-cheatsheet.md
 
 # helm
+
 ## Install Traefik
+
 Search for helm chart
 ```buildoutcfg
 helm search traefik

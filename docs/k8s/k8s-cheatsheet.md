@@ -76,6 +76,47 @@ Create a pod from a manifest file
 kubectl create -f <./manifest_filename.yml>
 ```
 
+## Labels
+
+Labels are a good way to organise pods. They are key value pairs, similar to tags in AWS.
+
+Add a label to a pod
+```buildoutcfg
+kubectl label pods <pod_name> key=value
+```
+
+Update an existing label value
+```buildoutcfg
+kubectl label pods <pod_name> key=new_value --overwrite
+```
+
+Remove a label
+```buildoutcfg
+kubectl label pods <pod_name> key-
+```
+
+Show all labels attached to pod
+```buildoutcfg
+kubectl get pods --show-labels
+```
+
+Show specifc labels attached to a pod
+```buildoutcfg
+kubectl get pods -L creation_method,env
+```
+
+Show pods with/without a label of any value
+```buildoutcfg
+kubectl get pods -l env
+kubectl get pods -l '!env'
+```
+
+Using set-based filters
+```buildoutcfg
+kubectl get pods -l 'env notin (dev,prod)'
+kubectl get pods -l 'creation_method=manual,env in (dev)'
+```
+
 ## Networking
 
 Add port forward to a pod

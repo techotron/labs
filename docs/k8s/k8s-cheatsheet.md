@@ -38,6 +38,16 @@ List pods from all namespaces
 kubectl get pods --all-namespaces
 ```
 
+List all resources
+```buildoutcfg
+kubectl get all --all
+```
+
+List all resources from all namespaces (assumed not tested)
+```buildoutcfg
+kubectl get all --all --all-namespaces
+```
+
 Describe a specific pod in more detail
 ```buildoutcfg
 kubectl describe pod <pod-name>
@@ -69,16 +79,82 @@ kubectl get pod <pod_name> -o yaml
 kubectl get pod <pod_name> -o json
 ```
 
+## Namespaces
+
+Namespaces are ways to logically separate pods, eg dev|QA|stage. It's possible for pods in different namespaces to communicate with each other if the networking configuration allows for it however.
+Create a new namespace
+```buildoutcfg
+kubectl create namespace <new-namespace-name>
+```
+**Note:** dots are not allowed in namespace names.
+
+Create namespace via YAML file
+```buildoutcfg
+apiVersion: v1
+kind: Namespace 
+metadata: 
+  name: custom-namespace
+```
+
+Alias for quick changing of default namespace
+```buildoutcfg
+alias kcn='kubectl config set-context $(kubectl config current-context) --namespace
+```
+**Note:** This will allow you to change the namespace quickly using `kcn pre-prod` for example
+
 ## Creating pods
 
+When you create a pod you're really creating a replication controller. This is the object which manages the life cycle of the pod
 Create a pod from a manifest file
 ```buildoutcfg
 kubectl create -f <./manifest_filename.yml>
 ```
 
+Schedule a pod to a specific node
+This is done by adding the `nodeSelector` spec to the pod's YAML file
+```buildoutcfg
+...
+spec:
+  nodeSelector: 
+    gpu: "true"
+...
+```
+This will create the pod on any node which has the label "gpu=true"
+
+## Deleting pods
+
+When you delete a pod, the replication controller will automatically bring a new one back up. In order to delete the pod, you need to delete or reconfigure the replication controller.
+To delete a pod
+```buildoutcfg
+kubectl delete pods <pod-name>
+kubectl delete pods <pod1> <pod2> <pod3>
+```
+
+Delete pod based on label selector
+```buildoutcfg
+kubectl delete pods -l creation_method=manual
+```
+
+Delete all the pods by deleting the whole namespace
+```buildoutcfg
+kubectl delete ns <new-namespace-name>
+```
+
+Delete all pods whilst keeping the namespace
+```buildoutcfg
+kubectl delete pods --all
+```
+
+Delete all resources from the namespace
+```buildoutcfg
+kubectl delete all --all
+```
+**Note:** This will also delete the `kubernetes` service in the namespace, but this should automatically start back up
+
 ## Labels
 
-Labels are a good way to organise pods. They are key value pairs, similar to tags in AWS.
+Labels are a good way to organise resources. They are key value pairs, similar to tags in AWS.
+You can use the same commands to add labels to other resources - eg nodes. Just substitute "pods" with "nodes"
 
 Add a label to a pod
 ```buildoutcfg

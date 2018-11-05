@@ -225,6 +225,11 @@ Decode a secret
 kubectl get secrets dk-tls-secret -o json | jq '.data."tls.crt"' | sed 's/\"//g' | base64 --decode
 ```
 
+Decode a certificate from a secret
+```buildoutcfg
+kubectl get secrets dk-tls-secret -o json | jq '.data."tls.crt"' | sed 's/\"//g' | base64 --decode > /tmp/cert.temp && openssl x509 -text -noout -in /tmp/cert.temp
+```
+
 ## Help Commands
 
 Detail pod config manifests

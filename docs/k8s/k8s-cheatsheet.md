@@ -218,6 +218,13 @@ View a specific container's log within a pod
 kubectl logs <pod_nane> -c <container>
 ```
 
+## Secrets
+
+Decode a secret
+```buildoutcfg
+kubectl get secrets dk-tls-secret -o json | jq '.data."tls.crt"' | sed 's/\"//g' | base64 --decode
+```
+
 ## Help Commands
 
 Detail pod config manifests

@@ -230,6 +230,13 @@ Decode a certificate from a secret
 kubectl get secrets dk-tls-secret -o json | jq '.data."tls.crt"' | sed 's/\"//g' | base64 --decode > /tmp/cert.temp && openssl x509 -text -noout -in /tmp/cert.temp
 ```
 
+Create certificate and add as k8s secret
+```buildoutcfg
+openssl req -x509 -newkey rsa:4096 -sha256 -nodes -keyout tls.key -out tls.crt -subj "/CN=*.snowco.com/O=Snowco/OU=DevOps" -days 3650
+kubectl -n=ops create secret tls <name_of_secret> --cert=tls.crt --key=tls.key
+```
+
+
 ## Help Commands
 
 Detail pod config manifests

@@ -24,4 +24,5 @@ RUN echo "Installing kubectl..." \
 RUN echo "Installing awscli..." \
     && pip install awscli
 
+CMD echo "default"
 #ENTRYPOINT echo "$AWS_ACCESS_KEY_ID $AWS_SECRET_KEY_ID $AWS_REGION $KOPS_IAM_USER"

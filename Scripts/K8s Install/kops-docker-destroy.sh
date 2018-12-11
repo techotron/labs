@@ -18,6 +18,9 @@ KOPS_STATE_STORE="s3://$KOPS_BUCKET"
 AWS_AZ0=$(aws ec2 describe-availability-zones | jq -r '.AvailabilityZones[0].ZoneName')
 AWS_AZ1=$(aws ec2 describe-availability-zones | jq -r '.AvailabilityZones[1].ZoneName')
 
+echo "Delete kubectl config file which was added to the bucket manually..."
+aws s3api delete-object --bucket $KOPS_BUCKET --key $KOPS_NAME/.kube/config --profile $AWS_PROFILE
+
 echo "Destroy cluster..."
 docker run \
     -e AWS_ACCESS_KEY_ID=$AK \

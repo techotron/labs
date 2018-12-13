@@ -79,6 +79,16 @@ kubectl get pod <pod_name> -o yaml
 kubectl get pod <pod_name> -o json
 ```
 
+Editing resources directly
+```buildoutcfg
+kubectl edit replication controller <replication_controller_name>
+```
+Note: This will use the default text editor specified in either the EDITOR env or KUBE_EDITOR env.
+This can be added to ~/.bashrc:
+```buildoutcfg
+export KUBE_EDITOR="/usr/bin/vi"
+```
+
 ## Namespaces
 
 Namespaces are ways to logically separate pods, eg dev|QA|stage. It's possible for pods in different namespaces to communicate with each other if the networking configuration allows for it however.
@@ -249,7 +259,7 @@ Detail pod config sub section
 kubectl explain pod.spec
 ```
 
-#####Dashboard
+## Dashboard
 Get the k8s dashboard (GKE)
 ```buildoutcfg
 kubectl cluster-info | grep dashboard

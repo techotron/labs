@@ -356,9 +356,9 @@ Resources:
                 #!/bin/bash
                 if [ "$(docker ps | grep jenkins)" ]; then
                   docker kill $(docker ps -q)
-                  docker run -p 80:8080 -p 50000:50000 -v /efs/jenkins_home:/var/jenkins_home eddy_jenkins_lts:2.89.3;
+                  docker run -d -p 80:8080 -p 50000:50000 -v /efs/jenkins_home:/var/jenkins_home eddy_jenkins_lts:2.89.3;
                 else
-                  docker run -p 80:8080 -p 50000:50000 -v /efs/jenkins_home:/var/jenkins_home eddy_jenkins_lts:2.89.3;
+                  docker run -d -p 80:8080 -p 50000:50000 -v /efs/jenkins_home:/var/jenkins_home eddy_jenkins_lts:2.89.3;
                 fi
               mode: "000755"
           commands:
@@ -384,7 +384,7 @@ Resources:
               command: "echo \"$(date) - 061-jenkins-docker-run\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/run-jenkins.sh"
               waitAfterCompletion: '90'
             069-jenkins-get-password:
-              command: "echo \"$(date) - 069-jenkins-get-password: $(cat /efs/jenkins_home/secrets/initialAdminPassword)\" | sudo tee --append /home/ec2-user/eddyCFN.log"
+              command: "echo \"$(date) - 069-jenkins-get-password: $(sudo cat /efs/jenkins_home/secrets/initialAdminPassword)\" | sudo tee --append /home/ec2-user/eddyCFN.log"
               waitAfterCompletion: '0'
             999-signal-complete:
               command: !Join

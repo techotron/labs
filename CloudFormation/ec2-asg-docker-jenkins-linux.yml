@@ -260,7 +260,7 @@ Resources:
           - - |
               #!/bin/bash -xe
             - |
-              echo $(date)
+              date
               # run init scripts
             - '/opt/aws/bin/cfn-init -v '
             - ' --stack '

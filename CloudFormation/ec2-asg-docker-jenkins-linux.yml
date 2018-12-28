@@ -76,17 +76,11 @@ Resources:
       Handle: !Ref ec2VMUpdateWaitHandle
       Timeout: '2400'
 
-  fileSystem1:
-    Type: AWS::EFS::FileSystem
-    Properties:
-      Encrypted: False
-      PerformanceMode: generalPurpose
-      ThroughputMode: bursting
-
   fileSystemMount1:
     Type: AWS::EFS::MountTarget
     Properties:
-      FileSystemId: !Ref fileSystem1
+      FileSystemId:
+        Fn::ImportValue: "eddy-efs-jenkinsVolume1"
       SecurityGroups:
         - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
       SubnetId:
@@ -95,7 +89,8 @@ Resources:
   fileSystemMount2:
     Type: AWS::EFS::MountTarget
     Properties:
-      FileSystemId: !Ref fileSystem1
+      FileSystemId:
+        Fn::ImportValue: "eddy-efs-jenkinsVolume1"
       SecurityGroups:
         - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
       SubnetId:
@@ -147,16 +142,6 @@ Resources:
         Fn::ImportValue: !Ref vpcStackName
 
 ############################ ALB Listener ######################################
-#  loadBalancerListener:
-#    Type: AWS::ElasticLoadBalancingV2::Listener
-#    Properties:
-#      DefaultActions:
-#      - Type: forward
-#        TargetGroupArn: !Ref loadBalancerTargetGroup
-#      LoadBalancerArn: !Ref loadBalancer
-#      Port: 80
-#      Protocol: HTTP
-
   loadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -320,12 +305,16 @@ Resources:
                 sudo yum -y update
               mode: "000755"
             /usr/local/bin/mount-efs.sh:
-              content: !Sub |
-                #!/bin/bash
-                if [ ! -d /efs ]; then
-                  sudo mkdir /efs
-                  sudo mount -t efs ${fileSystem1}:/ efs
-                fi
+              content: !Sub
+                - |-
+                  #!/bin/bash
+                  if [ ! -d /efs ]; then
+                    sudo mkdir /efs
+                    sudo mount -t efs ${fileVolume1}:/ efs
+                  fi
+                - {
+                    fileVolume1: !ImportValue eddy-efs-jenkinsVolume1
+                  }
               mode: "000755"
             /usr/local/bin/docker-install.sh:
               content: !Sub |
@@ -428,4 +417,3 @@ Outputs:
       Fn::GetAtt: [ loadBalancer, DNSName ]
     Export:
       Name: !Join [ "-", [ !Ref stackName, "loadBalancerCname" ]]
-

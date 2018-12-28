@@ -1,0 +1,24 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: docker asg for jenkins
+
+Parameters:
+  stackName:
+    Description: Name of the stack to distinguish it from other stacks
+    Type: String
+    Default: "eddy-efs"
+
+Resources:
+  jenkinsVolume1:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: False
+      PerformanceMode: generalPurpose
+      ThroughputMode: bursting
+
+Outputs:
+  jenkinsVolume1:
+    Description: Ref ID for Jenkins volume
+    Value: !Ref jenkinsVolume1
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "jenkinsVolume1" ]]

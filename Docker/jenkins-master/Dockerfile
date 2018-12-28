@@ -9,6 +9,4 @@ RUN apt-get update &&\
     apt-get update &&\
     apt-get clean
 
-
-USER jenkins
 ENV JENKINS_OPTS --httpPort=8080 --httpKeepAliveTimeout=60000

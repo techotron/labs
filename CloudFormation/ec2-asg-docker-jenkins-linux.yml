@@ -337,8 +337,13 @@ Resources:
             /usr/local/bin/init-git.sh:
               content: !Sub |
                 #!/bin/bash
-                mkdir /git
-                git clone https://github.com/techotron/labs.git /git/labs
+                if [ -d /git/labs ]; then
+                  cd /git/labs
+                  git pull origin master
+                else
+                  mkdir /git
+                  git clone https://github.com/techotron/labs.git /git/labs
+                fi
               mode: "000755"
             /usr/local/bin/build-jenkins.sh:
               content: !Sub |

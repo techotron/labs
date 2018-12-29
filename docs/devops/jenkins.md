@@ -6,6 +6,6 @@ This will deploy a Jenkins master node onto a ASG running CentOS. The instance i
 ### Deployment
 This will upload the CFN template to S3 and create/update the stack.
 ```bash
-./labs/Scripts/deploy-jenkins.sh
+./labs/Scripts/Jenkins/deploy-jenkins.sh
 ```
    

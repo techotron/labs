@@ -397,6 +397,12 @@ Resources:
                     aws cloudformation update-stack --stack-name eddy-jenkins-agents-dns --template-url https://s3-eu-west-1.amazonaws.com/278942993584-eddy-scratch/git/eddy-jenkins/route53-record.yml --region ${AWS::Region} --parameters ParameterKey=ip,ParameterValue=$IP;
                 fi
               mode: "000755"
+            /var/jenkins_home/.ssh/id_rsa:
+              source: https://s3-eu-west-1.amazonaws.com/278942993584-eddy-scratch/keys/eddy-jenkins/id_rsa
+              authentication: s3AccessCreds
+            /var/jenkins_home/.ssh/id_rsa.pub:
+              source: https://s3-eu-west-1.amazonaws.com/278942993584-eddy-scratch/keys/eddy-jenkins/id_rsa.pub
+              authentication: s3AccessCreds
           commands:
             010-script-start:
               command: "echo \"$(date) - 010-script-start\" | sudo tee --append /home/ec2-user/eddyCFN.log"

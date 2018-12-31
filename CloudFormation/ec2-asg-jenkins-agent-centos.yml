@@ -46,11 +46,6 @@ Parameters:
     Type: String
     Default: ami-08935252a36e25f85
 
-  jenkinsVersion:
-    Description: Version of Jenkins image to use
-    Type: String
-    Default: 2.150.1
-
 Mappings:
   "multiAZ":
     "True":

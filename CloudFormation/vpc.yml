@@ -6,6 +6,7 @@ Parameters:
   stackName:
     Description: Name of the stack to distinguish it from other stacks
     Type: String
+    Default: eddy-vpc
 
 Mappings:
   SubnetConfig:
@@ -263,6 +264,22 @@ Resources:
         - Key: Name
           Value: !Join [ "-", [ !Ref stackName, "externalSqlSecurityGroup" ]]
 
+  externalJenkinsAgentSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow port 50000 from jenkins agents
+      VpcId:
+        Ref: vpc
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        ToPort: "50000"
+        FromPort: "50000"
+        CidrIp: 0.0.0.0/0
+
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref stackName, "externalJenkinsAgentSecurityGroup" ]]
+
   externalPostgresSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -367,3 +384,10 @@ Outputs:
       Ref: externalPostgresSecurityGroup
     Export:
       Name: !Join [ "-", [ !Ref stackName, "externalpostgres-securitygroup" ]]
+
+  externalJenkinsAgentSecurityGroup:
+    Description: ID for the external jenkins agent traffic security group
+    Value:
+      Ref: externalJenkinsAgentSecurityGroup
+    Export:
+      Name: !Join [ "-", [ !Ref stackName, "externaljenkins-securitygroup" ]]

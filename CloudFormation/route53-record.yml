@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: docker asg for jenkins
+
+Parameters:
+  keyName:
+    Description: Key pair to use for instances
+    Type: String
+    Default: "eddy.snow@intapp-devopssbx"
+
+  hostedZoneName:
+    Description: Zone name for DNS record
+    Type: String
+    Default: "sbx.kube.intapp.com."
+
+  dnsName:
+    Description: DNS Name for Jenkins
+    Type: String
+    Default: eddy-jenkins-agents.sbx.kube.intapp.com
+
+  ip:
+    Description: IP Address for the Jenkins master
+    Type: String
+
+Resources:
+  jenkinsAgentRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Ref hostedZoneName
+      Comment: Jenkins record for the load balancer
+      Name: !Ref dnsName
+      Type: A
+      TTL: 60
+      ResourceRecords:
+        - !Ref ip

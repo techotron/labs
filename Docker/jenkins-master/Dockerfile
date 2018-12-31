@@ -16,4 +16,5 @@ RUN apt-get update &&\
 #COPY ./id_rsa /home/jenkins/.ssh/id_rsa
 #COPY ./id_rsa.pub /home/jenkins/.ssh/id_rsa.pub
 
+USER jenkins
 ENV JENKINS_OPTS --httpPort=8080 --httpKeepAliveTimeout=60000

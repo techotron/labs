@@ -137,13 +137,13 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 5
-      HealthCheckPath: /index.html
+      HealthCheckPath: /
       HealthCheckPort: 80
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 2
       HealthyThresholdCount: 2
       Matcher:
-        HttpCode: 200
+        HttpCode: 403
       Name: !Join [ "-", [ !Ref stackName, "tgt", "grp" ]]
       Port: 80
       Protocol: HTTP
@@ -247,6 +247,14 @@ Resources:
                   - 's3:ListMultipartUploadParts'
                   - 's3:ListBucketMultipartUploads'
                 Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'cloudformation:*'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'route53:*'
+                Resource: '*'
 
   autoScalingLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -259,6 +267,7 @@ Resources:
         - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
         - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "externalssh-securitygroup" ]]
         - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "webtraffic-securitygroup" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "externaljenkins-securitygroup"]]
       UserData: !Base64
         'Fn::Join':
           - ''
@@ -356,6 +365,15 @@ Resources:
                 cd /git/labs/Docker/jenkins-master
                 docker build -t eddy_jenkins_lts:${jenkinsVersion} .
               mode: "000755"
+            /usr/local/bin/setup-jenkins-user.sh:
+              content: !Sub |
+                #!/bin/bash
+                if [ "$(cat /etc/passwd | grep jenkins)" ]; then
+                  echo "no need to create Jenkins user"
+                else
+                  useradd --quiet -u 1000 jenkins;
+                fi
+              mode: "000755"
             /usr/local/bin/run-jenkins.sh:
               content: !Sub |
                 #!/bin/bash
@@ -364,6 +382,18 @@ Resources:
                   docker run -d -p 80:8080 -p 50000:50000 -v /efs/jenkins_home:/var/jenkins_home eddy_jenkins_lts:${jenkinsVersion};
                 else
                   docker run -d -p 80:8080 -p 50000:50000 -v /efs/jenkins_home:/var/jenkins_home eddy_jenkins_lts:${jenkinsVersion};
+                fi
+              mode: "000755"
+            /usr/local/bin/add-agent-dns.sh:
+              content: !Sub |
+                IP=$(curl https://checkip.amazonaws.com/)
+                echo "[$(date)] - jenkins centos agents asg stack"
+                if [ ! $(aws cloudformation describe-stacks --region ${AWS::Region} | jq '.Stacks[].StackName' | grep eddy-jenkins-agents-dns) ]; then
+                    echo "[$(date)] - Creating eddy-jenkins-agents-dns stack"
+                    aws cloudformation create-stack --stack-name eddy-jenkins-agents-dns --template-url https://s3-eu-west-1.amazonaws.com/278942993584-eddy-scratch/git/eddy-jenkins/route53-record.yml --region ${AWS::Region} --parameters ParameterKey=ip,ParameterValue=$IP;
+                else
+                    echo "[$(date)] - Updating eddy-jenkins-agents-dns stack"
+                    aws cloudformation update-stack --stack-name eddy-jenkins-agents-dns --template-url https://s3-eu-west-1.amazonaws.com/278942993584-eddy-scratch/git/eddy-jenkins/route53-record.yml --region ${AWS::Region} --parameters ParameterKey=ip,ParameterValue=$IP;
                 fi
               mode: "000755"
           commands:
@@ -388,6 +418,9 @@ Resources:
             061-jenkins-docker-run:
               command: "echo \"$(date) - 061-jenkins-docker-run\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/run-jenkins.sh"
               waitAfterCompletion: '90'
+            062-jenkins-agent-dns:
+              command: "echo \"$(date) - 062-jenkins-agent-dns\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/add-agent-dns.sh"
+              waitAfterCompletion: '0'
             069-jenkins-get-password:
               command: "echo \"$(date) - 069-jenkins-get-password: $(sudo cat /efs/jenkins_home/secrets/initialAdminPassword)\" | sudo tee --append /home/ec2-user/eddyCFN.log"
               waitAfterCompletion: '0'

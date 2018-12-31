@@ -220,12 +220,6 @@ Resources:
                 sudo useradd jenkins
                 echo 'jenkins	ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
               mode: "000755"
-            /home/jenkins/.ssh/authorized_keys:
-              source: https://s3-eu-west-1.amazonaws.com/278942993584-eddy-scratch/keys/eddy-jenkins/id_rsa
-              authentication: s3AccessCreds
-              mode: "000400"
-              owner: "jenkins"
-              group: "jenkins"
           commands:
             010-script-start:
               command: "echo \"$(date) - 010-script-start\" | sudo tee --append /home/ec2-user/eddyCFN.log"

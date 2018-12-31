@@ -9,12 +9,5 @@ RUN apt-get update &&\
     apt-get update &&\
     apt-get clean
 
-#RUN echo "jenkins:password" | chpasswd
-#
-#RUN mkdir /home/jenkins &&\
-#    mkdir /home/jenkins/.ssh
-#COPY ./id_rsa /home/jenkins/.ssh/id_rsa
-#COPY ./id_rsa.pub /home/jenkins/.ssh/id_rsa.pub
-
 USER jenkins
 ENV JENKINS_OPTS --httpPort=8080 --httpKeepAliveTimeout=60000

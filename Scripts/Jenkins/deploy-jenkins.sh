@@ -10,6 +10,8 @@ aws s3api put-object --bucket 278942993584-eddy-scratch --key git/eddy-jenkins/e
 aws s3api put-object --bucket 278942993584-eddy-scratch --key git/eddy-jenkins/ec2-asg-docker-jenkins-linux.yml --region $AWS_REGION --profile $AWS_PROFILE --body /Users/eddys/git/labs/Cloudformation/ec2-asg-docker-jenkins-linux.yml
 aws s3api put-object --bucket 278942993584-eddy-scratch --key git/eddy-jenkins/ec2-asg-jenkins-agent-centos.yml --region $AWS_REGION --profile $AWS_PROFILE --body /Users/eddys/git/labs/Cloudformation/ec2-asg-jenkins-agent-centos.yml
 aws s3api put-object --bucket 278942993584-eddy-scratch --key git/eddy-jenkins/route53-record.yml --region $AWS_REGION --profile $AWS_PROFILE --body /Users/eddys/git/labs/Cloudformation/route53-record.yml
+echo "[$(date)] - Uploading other necessary files to s3"
+aws s3api put-object --bucket 278942993584-eddy-scratch --key git/eddy-jenkins/id_rsa.pub --region $AWS_REGION --profile $AWS_PROFILE --body /Users/eddys/git/labs/Docker/jenkins-master/id_rsa.pub
 
 
 echo "[$(date)] - vpc stack"

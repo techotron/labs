@@ -214,6 +214,15 @@ Resources:
                 sudo yum clean all
                 sudo yum -y update
               mode: "000755"
+            /usr/local/bin/setup-user.sh:
+              content: !Sub |
+                #!/bin/bash
+                sudo useradd jenkins
+                echo 'jenkins	ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+              mode: "000755"
+            /home/jenkins/.ssh/id_rsa.pub:
+              source: https://s3-eu-west-1.amazonaws.com/278942993584-eddy-scratch/git/eddy-jenkins/id_rsa.pub
+              authentication: s3AccessCreds
           commands:
             010-script-start:
               command: "echo \"$(date) - 010-script-start\" | sudo tee --append /home/ec2-user/eddyCFN.log"

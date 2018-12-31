@@ -400,9 +400,15 @@ Resources:
             /var/jenkins_home/.ssh/id_rsa:
               source: https://s3-eu-west-1.amazonaws.com/278942993584-eddy-scratch/keys/eddy-jenkins/id_rsa
               authentication: s3AccessCreds
+              mode: "000400"
+              owner: "jenkins"
+              group: "jenkins"
             /var/jenkins_home/.ssh/id_rsa.pub:
               source: https://s3-eu-west-1.amazonaws.com/278942993584-eddy-scratch/keys/eddy-jenkins/id_rsa.pub
               authentication: s3AccessCreds
+              mode: "000400"
+              owner: "jenkins"
+              group: "jenkins"
           commands:
             010-script-start:
               command: "echo \"$(date) - 010-script-start\" | sudo tee --append /home/ec2-user/eddyCFN.log"

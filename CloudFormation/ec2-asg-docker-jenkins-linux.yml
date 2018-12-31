@@ -373,6 +373,7 @@ Resources:
                 else
                   useradd --quiet -u 1000 jenkins;
                 fi
+                chown -R jenkins:jenkins /efs/jenkins_home
               mode: "000755"
             /usr/local/bin/run-jenkins.sh:
               content: !Sub |
@@ -408,6 +409,9 @@ Resources:
               waitAfterCompletion: '0'
             040-mount-efs:
               command: "echo \"$(date) - 040-mount-efs\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/mount-efs.sh"
+              waitAfterCompletion: '0'
+            045-user-setup:
+              command: "echo \"$(date) - 045-user-setup\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/setup-jenkins-user.sh"
               waitAfterCompletion: '0'
             050-init-git:
               command: "echo \"$(date) - 050-init-git\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/init-git.sh"

@@ -1,0 +1,277 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: asg for jenkins agents (centos)
+
+Parameters:
+  keyName:
+    Description: Key pair to use for instances
+    Type: String
+    Default: "eddy.snow@intapp-devopssbx"
+
+  vpcStackName:
+    Description: Name of the vpc stack in which to deploy the cluster
+    Type: String
+    Default: "eddy-vpc"
+
+  stackName:
+    Description: Name of the stack to distinguish it from other stacks
+    Type: String
+    Default: "eddy-jenkins-agents-centos"
+
+  instanceType:
+    Description: ec2 instance type
+    Type: String
+    Default: "t2.small"
+
+  multiAZ:
+    Description: Flag for multi AZ environment
+    AllowedValues:
+      - "True"
+      - "False"
+    Type: String
+    Default: "False"
+
+#  configureScript:
+#    Description: S3 URL for the Install Scripts
+#    Type: String
+
+  s3BuildBucket:
+    Description: S3 Bucket for deployment resources
+    Type: String
+    Default: "278942993584-eddy-scratch"
+
+  # ./git/labs/Scripts/Common/deploy/get-latestami.ps1 -imageName "amzn-ami-hvm-*-x86_64-gp2*" -awsAccessKey $((get-awscredentials -profilename intapp-devopssbx_eddy.snow@intapp.com).getcredentials().AccessKey) -awsSecretKey $((get-awscredentials -profilename intapp-devopssbx_eddy.snow@intapp.com).getcredentials().SecretKey) -region eu-west-1
+  ec2Image:
+    Description: AMI for the ec2 instance
+    Type: String
+    Default: ami-08935252a36e25f85
+
+  jenkinsVersion:
+    Description: Version of Jenkins image to use
+    Type: String
+    Default: 2.150.1
+
+Mappings:
+  "multiAZ":
+    "True":
+      minInstancesInService: 2
+      maxInstancesInService: 4
+    "False":
+      minInstancesInService: 1
+      maxInstancesInService: 4
+
+Resources:
+  ec2VMUpdateWaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  eC2VMUpdateWaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn: autoScalingGroup
+    Properties:
+      Handle: !Ref ec2VMUpdateWaitHandle
+      Timeout: '2400'
+
+  ssmInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref ssmRole
+
+  ssmRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ssm:DescribeAssociation'
+                  - 'ssm:GetDeployablePatchSnapshotForInstance'
+                  - 'ssm:GetDocument'
+                  - 'ssm:GetParameters'
+                  - 'ssm:ListAssociations'
+                  - 'ssm:ListInstanceAssociations'
+                  - 'ssm:PutInventory'
+                  - 'ssm:UpdateAssociationStatus'
+                  - 'ssm:UpdateInstanceAssociationStatus'
+                  - 'ssm:UpdateInstanceInformation'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'ec2messages:AcknowledgeMessage'
+                  - 'ec2messages:DeleteMessage'
+                  - 'ec2messages:FailMessage'
+                  - 'ec2messages:GetEndpoint'
+                  - 'ec2messages:GetMessages'
+                  - 'ec2messages:SendReply'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'cloudwatch:PutMetricData'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeInstanceStatus'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'ds:CreateComputer'
+                  - 'ds:DescribeDirectories'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:DescribeLogGroups'
+                  - 'logs:DescribeLogStreams'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:Get*'
+                  - 's3:List*'
+                  - 's3:AbortMultipartUpload'
+                  - 's3:ListMultipartUploadParts'
+                  - 's3:ListBucketMultipartUploads'
+                Resource: '*'
+
+  autoScalingLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !Ref ec2Image
+      IamInstanceProfile: !Ref ssmInstanceProfile
+      InstanceType: !Ref instanceType
+      KeyName: !Ref keyName
+      SecurityGroups:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "externalssh-securitygroup" ]]
+      UserData: !Base64
+        'Fn::Join':
+          - ''
+          - - |
+              #!/bin/bash -xe
+            - |
+              date
+              # run init scripts
+            - '/opt/aws/bin/cfn-init -v '
+            - ' --stack '
+            - !Ref 'AWS::StackId'
+            - ' --resource autoScalingGroup '
+            - ' --region '
+            - !Ref 'AWS::Region'
+            - |+
+
+  autoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Metadata:
+      AWS::CloudFormation::Authentication:
+        s3AccessCreds:
+          type: S3
+          roleName: !Ref ssmRole
+          buckets:
+            - !Ref s3BuildBucket
+      AWS::CloudFormation::Init:
+        config:
+          files:
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.autoScalingGroup.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource autoScalingGroup --region ${AWS::Region}
+                runas=root
+              mode: "000400"
+              owner: "root"
+              group: "root"
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackName}
+                region=${AWS::Region}
+                interval=1
+              mode: "000400"
+              owner: "root"
+              group: "root"
+            /usr/local/bin/init-update.sh:
+              content: !Sub |
+                #!/bin/bash
+                sudo yum install –y epel-release
+                sudo yum install -y jq
+                sudo yum install -y python2
+                sudo yum install -y python2-devel
+                sudo yum install -y python2-pip
+                sudo yum install -y amazon-efs-utils
+                sudo yum install -y git
+                sudo yum clean all
+                sudo yum -y update
+              mode: "000755"
+          commands:
+            010-script-start:
+              command: "echo \"$(date) - 010-script-start\" | sudo tee --append /home/ec2-user/eddyCFN.log"
+              waitAfterCompletion: '0'
+            020-run-updates:
+              command: "echo \"$(date) - 020-run-updates\" | sudo tee --append /home/ec2-user/eddyCFN.log && /usr/local/bin/init-update.sh"
+              waitAfterCompletion: '0'
+            999-signal-complete:
+              command: !Join
+                - ''
+                - - '/opt/aws/bin/cfn-signal -e $? -r "call to 999-signal-complete" '
+                  - !Base64
+                    Ref: ec2VMUpdateWaitHandle
+              ignoreErrors: true
+              waitAfterCompletion: 0
+          services:
+            sysvinit:
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+    Properties:
+      AvailabilityZones:
+        - !Select
+          - '0'
+          - !GetAZs ''
+        - !Select
+          - '1'
+          - !GetAZs ''
+      VPCZoneIdentifier:
+# Place Instances into public subnet for now so I can SSH onto them easily. ES.
+#        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "private-subnet1" ]]
+#        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "private-subnet2" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet2" ]]
+      LaunchConfigurationName: !Ref autoScalingLaunchConfig
+      MinSize:
+        Fn::FindInMap: [multiAZ, !Ref multiAZ, minInstancesInService]
+      MaxSize:
+        Fn::FindInMap: [multiAZ, !Ref multiAZ, maxInstancesInService]
+      Tags:
+        - Key: Name
+          Value: !Join [ "-", [ !Ref stackName, "asg" ]]
+          PropagateAtLaunch: 'true'
+
+  scalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      PolicyType: SimpleScaling
+      Cooldown: '60'
+      AutoScalingGroupName: !Ref autoScalingGroup
+      ScalingAdjustment: 1
+

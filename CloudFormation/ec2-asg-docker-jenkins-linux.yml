@@ -66,6 +66,11 @@ Parameters:
     Type: String
     Default: eddy-jenkins.sbx.kube.intapp.com
 
+  jenkinsVersion:
+    Description: Version of Jenkins image to use
+    Type: String
+    Default: 2.150.1
+
 Mappings:
   "multiAZ":
     "True":
@@ -349,16 +354,16 @@ Resources:
               content: !Sub |
                 #!/bin/bash
                 cd /git/labs/Docker/jenkins-master
-                docker build -t eddy_jenkins_lts:2.89.3 .
+                docker build -t eddy_jenkins_lts:${jenkinsVersion} .
               mode: "000755"
             /usr/local/bin/run-jenkins.sh:
               content: !Sub |
                 #!/bin/bash
                 if [ "$(docker ps | grep jenkins)" ]; then
                   docker kill $(docker ps -q)
-                  docker run -d -p 80:8080 -p 50000:50000 -v /efs/jenkins_home:/var/jenkins_home eddy_jenkins_lts:2.89.3;
+                  docker run -d -p 80:8080 -p 50000:50000 -v /efs/jenkins_home:/var/jenkins_home eddy_jenkins_lts:${jenkinsVersion};
                 else
-                  docker run -d -p 80:8080 -p 50000:50000 -v /efs/jenkins_home:/var/jenkins_home eddy_jenkins_lts:2.89.3;
+                  docker run -d -p 80:8080 -p 50000:50000 -v /efs/jenkins_home:/var/jenkins_home eddy_jenkins_lts:${jenkinsVersion};
                 fi
               mode: "000755"
           commands:

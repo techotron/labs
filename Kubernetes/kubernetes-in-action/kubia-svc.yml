@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: kubia
 spec:
-# There are 2 types of sessionAffinity, none|ClientIP. K8s services operates on TCP and other session based methods (cookies for example) tend to be a construct of high layer protocols (like HTTP). 
+# There are 2 types of sessionAffinity, none|ClientIP. K8s services operates on TCP and other session based methods (cookies for example) tend to be a construct of high layer protocols (like HTTP).
   sessionAffinity: ClientIP
   ports:
   - port: 80

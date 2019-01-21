@@ -1,0 +1,143 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Instance to run KOPS installer scripts
+
+Parameters:
+  keyName:
+    Description: Key pair to use for instances
+    Type: String
+    Default: eddy.snow@intapp-devopssbx
+
+  vpcStackName:
+    Description: Name of the vpc stack in which to deploy the cluster
+    Type: String
+    Default: eddy-vpc
+
+  stackName:
+    Description: Name of the stack to distinguish it from other stacks
+    Type: String
+    Default: eddy-k8s-master
+
+  instanceType:
+    Description: ec2 instance type
+    Type: String
+    Default: t3.medium
+
+  linuxImage:
+    Description: AMI for the ec2 instance
+    Type: String
+    Default: ami-09f0b8b3e41191524
+
+Resources:
+  master1:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          files:
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.autoScalingGroup.Metadata.AWS::CloudFormation::Init
+                action=cfn-init -v --stack ${AWS::StackId} --resource master1 --region ${AWS::Region}
+                runas=root
+              mode: "000400"
+              owner: "root"
+              group: "root"
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackName}
+                region=${AWS::Region}
+                interval=1
+              mode: "000400"
+              owner: "root"
+              group: "root"
+            /usr/local/bin/install-docker.sh:
+              content: !Sub |
+                sudo apt-get update -y && sudo apt-get upgrade -y
+                sudo apt-get install apt-transport-https ca-certificates curl gnupg2 software-properties-common
+                sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+                sudo apt-key fingerprint 0EBFCD88
+                sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+                sudo apt-get update
+                sudo apt-get install docker-ce
+              mode: "000400"
+              owner: "ubuntu"
+              group: "ubuntu"
+            /usr/local/bin/install-kubeadm.sh:
+              content: !Sub |
+                sudo curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+                sudo cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
+                deb http://apt.kubernetes.io/ kubernetes-xenial main
+                EOF
+                sudo apt-get update && sudo apt-get install -y kubelet kubeadm kubectl
+
+                # Pull kubernetes images
+                kubeadm config images pull
+              mode: "000400"
+              owner: "ubuntu"
+              group: "ubuntu"
+            /usr/local/bin/setup-commands.sh:
+              content: !Sub |
+                sudo vi /etc/fstab # (remove a line referencing 'swap.img', if it exists). Didn't need to do with with Ubuntu AMI
+                sudo swapoff -a
+              mode: "000400"
+              owner: "ubuntu"
+              group: "ubuntu"
+            /usr/local/bin/kubectl-setup.sh:
+              content: !Sub |
+                # Run in a non-elevated, non-root user shell
+
+                mkdir -p $HOME/.kube
+                sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+                sudo chown $(id -u):$(id -g) $HOME/.kube/config
+              mode: "000400"
+              owner: "ubuntu"
+              group: "ubuntu"
+          services:
+            sysvinit:
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+    Properties:
+      InstanceType: !Ref instanceType
+      KeyName: !Ref keyName
+      ImageId: !Ref linuxImage
+      NetworkInterfaces:
+        - DeleteOnTermination: 'true'
+          DeviceIndex: 0
+          SubnetId:
+            Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
+          GroupSet:
+            - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "externalssh-securitygroup" ]]
+      UserData: !Base64
+        'Fn::Join':
+          - ''
+          - - |
+              #!/bin/bash -x
+            - |
+              # run init scripts
+            - |
+              # run init scripts
+            - 'sudo apt-get update && '
+            - 'sudo apt-get -y install awscli && '
+            - 'sudo apt-get -y install jq && '
+            - 'sudo apt-get install -y python-pip && '
+            - 'sudo pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz && '
+            - 'cfn-init -v '
+            - ' --stack '
+            - !Ref 'AWS::StackId'
+            - ' --resource master1 '
+            - ' --region '
+            - !Ref 'AWS::Region'
+            - |+
+      Tags:
+        - Key: Name
+          Value:
+            !Join [ "-", [ "k8s", !Ref stackName, "master" ]]
+

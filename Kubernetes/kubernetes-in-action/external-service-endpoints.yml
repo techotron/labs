@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: external-service
+subsets:
+  - addresses:
+    - ip: 98.154.13.144
+    - ip: 67.54.2.103
+    ports:
+    - port: 80
+
+# The name needs to match the name of the service resource that is created.
+# The idea here is that internal clients can connect to the service, which is linked to this endpoint,
+# which will balance traffic to the public IPs listed (which are random ones in this example).

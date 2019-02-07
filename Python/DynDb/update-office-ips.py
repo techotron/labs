@@ -9,7 +9,7 @@ secretKey = sys.argv[2]
 region = sys.argv[3]
 tableName = sys.argv[4]
 
-computerNames = ['peterw-2620','eddys-3620','joeb-3620','martinl-3620','pc30.rekoop.local']
+computerNames = ['peterw-2620','eddys-3620','joeb-3620','martinl-3620','pc30.rekoop.local','nicf-3620']
 
 mysession = boto3.session.Session(aws_access_key_id=accessKey, aws_secret_access_key=secretKey)
 

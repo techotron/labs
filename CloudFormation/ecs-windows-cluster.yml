@@ -1,0 +1,475 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: windows ecs
+
+Parameters:
+  stackName:
+    Description: Name of the stack to distinguish it from other stacks
+    Type: String
+    Default: xyz
+
+  KeyName:
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    Description: >-
+      Name of an existing EC2 key pair to enable SSH access to the ECS
+      instances.
+    Default: xyz
+
+  VpcId:
+    Type: 'AWS::EC2::VPC::Id'
+    Description: Select a default VPC ID.
+    Default: xyz
+
+  vpcStackName:
+    Description: Name of the vpc stack in which to deploy the cluster
+    Type: String
+    Default: stack-stem
+
+  ECSImageName:
+    Type: String
+    Description: Select the image uploaded in AWS ECR.
+    Default: image-repo
+
+  DesiredCapacity:
+    Type: Number
+    Default: '1'
+    Description: Number of instances to launch in your ECS cluster.
+
+  MinSize:
+    Type: Number
+    Default: '1'
+    Description: Minimum number of instances that can be launched in your ECS cluster.
+
+  MaxSize:
+    Type: Number
+    Default: '4'
+    Description: Maximum number of instances that can be launched in your ECS cluster.
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t3.large
+
+  ecsRole:
+    Description: Role name for the ECS cluster to use
+    Type: String
+    Default: role-from-iam-stack
+
+#Microsoft Windows Server 2016 Base with Containers - ami-034f82225dd74c8df (built on win10 1803)
+#sysprepped AMI of above image with microsoft/iis already downloaded: ami-0eef80ee85eb31c96
+Mappings:
+  AWSRegionToAMI:
+    eu-west-1:
+      AMIID: ami-034f82225dd74c8df
+
+Resources:
+  EcsSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: ECS Security Group
+      VpcId: !Ref VpcId
+  EcsSecurityGroupHTTPinbound:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref EcsSecurityGroup
+      IpProtocol: tcp
+      FromPort: '80'
+      ToPort: '80'
+      CidrIp: 0.0.0.0/0
+  EcsSecurityGroupRDPinbound:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref EcsSecurityGroup
+      IpProtocol: tcp
+      FromPort: '3389'
+      ToPort: '3389'
+      CidrIp: 0.0.0.0/0
+  EcsSecurityGroupALBports:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref EcsSecurityGroup
+      IpProtocol: tcp
+      FromPort: '31000'
+      ToPort: '61000'
+      SourceSecurityGroupId: !Ref EcsSecurityGroup
+  EcsSecurityGroupALBports2:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref EcsSecurityGroup
+      IpProtocol: tcp
+      FromPort: '31000'
+      ToPort: '61000'
+      CidrIp: 10.0.0.0/16
+
+  ECSCluster:
+    Type: 'AWS::ECS::Cluster'
+  CloudwatchLogsGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Join
+        - '-'
+        - - ECSLogGroup
+          - !Ref 'AWS::StackName'
+      RetentionInDays: 14
+  taskdefinition:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Name: !Join [ "-", [ !Ref stackName, "ecs", "iistest", "container" ]]
+          Cpu: '200'
+          Essential: 'true'
+          Image: !Ref ECSImageName
+          Memory: '2048'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref CloudwatchLogsGroup
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: !Join [ "-", [ !Ref stackName, "ecs", "iistest", "container" ]]
+          PortMappings:
+            - ContainerPort: 80
+  ECSALB:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Name: ECSALB
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+        - Key: idle_seconds
+          Value: '30'
+      Subnets:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet1" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "public-subnet2" ]]
+      SecurityGroups:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "webtraffic-securitygroup" ]]
+        - !Ref EcsSecurityGroup
+  ALBListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    DependsOn: ECSServiceRole
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ECSTargetGroup
+      LoadBalancerArn: !Ref ECSALB
+      Port: '80'
+      Protocol: HTTP
+  ECSALBListenerRule:
+    Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
+    DependsOn: ALBListener
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref ECSTargetGroup
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - /
+      ListenerArn: !Ref ALBListener
+      Priority: 1
+  ECSTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    DependsOn: ECSALB
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthChecSeconds: 2
+      HealthyThresholdCount: 2
+      Name: ECSTargetGroup
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref VpcId
+  ECSAutoScalingGroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    Properties:
+      VPCZoneIdentifier:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "private-subnet1" ]]
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "private-subnet2" ]]
+      LaunchConfigurationName: !Ref ContainerInstances
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      DesiredCapacity: !Ref DesiredCapacity
+    CreationPolicy:
+      ResourceSignal:
+       : PT15M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: '1'
+        MaxBatchSize: '1'
+        PausT15M
+        WaitOnResourceSignals: 'true'
+
+  ContainerInstances:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Metadata:
+      'AWS::CloudFormation::Init':
+        config:
+          files:
+            'c:\cfn\cfn-hup.conf':
+              content: !Join
+                - ''
+                - - |
+                    [main]
+                  - stack=
+                  - !Ref 'AWS::StackId'
+                  - |+
+
+                  - region=
+                  - !Ref 'AWS::Region'
+                  - |+
+
+            'c:\cfn\hooks.d\cfn-auto-reloader.conf':
+              content: !Join
+                - ''
+                - - |
+                    [cfn-auto-reloader-hook]
+                  - |
+                    triggers=post.update
+                  - >
+                    path=Resources.ContainerInstances.Metadata.AWS::CloudFormation::Init
+                  - 'action=cfn-init.exe -v -s '
+                  - !Ref 'AWS::StackId'
+                  - ' -r ContainerInstances'
+                  - ' --region '
+                  - !Ref 'AWS::Region'
+                  - |+
+
+          services:
+            windows:
+              cfn-hup:
+                enabled: 'true'
+                ensureRunning: 'true'
+                files:
+                  - 'c:\cfn\cfn-hup.conf'
+                  - 'c:\cfn\hooks.d\cfn-auto-reloader.conf'
+    Properties:
+      ImageId: !FindInMap
+        - AWSRegionToAMI
+        - !Ref 'AWS::Region'
+        - AMIID
+      SecurityGroups:
+        - Fn::ImportValue: !Join [ "-", [ !Ref vpcStackName, "internaltraffic-securitygroup" ]]
+        - !Ref EcsSecurityGroup
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      KeyName: !Ref KeyName
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: '100'
+            VolumeType: gp2
+      AssociatePublicIpAddress: 'false'
+      UserData: !Base64
+        'Fn::Join':
+          - ''
+          - - |
+              <powershell>
+            - ' [Environment]::SetEnvironmentVariable("ECS_CLUSTER", "'
+            - !Ref ECSCluster
+            - '"'
+            - ', "Machine")'
+            - |+
+
+            - 'New-Item -Type directory -Path ${env:ProgramFiles}\Amazon\ECS -Force;'
+            - 'New-Item -Type directory -Path ${env:ProgramData}\Amazon\ECS -Force;'
+            - 'New-Item -Type directory -Path ${env:ProgramData}\Amazon\ECS\data -Force;'
+            - '$ecsExeDir = "${env:ProgramFiles}\Amazon\ECS";'
+            - '[Environment]::SetEnvironmentVariable("ECS_LOGFILE", "${env:ProgramData}\Amazon\ECS\log\ecs-agent.log", "Machine");'
+            - '[Environment]::SetEnvironmentVariable("ECS_DATADIR", "${env:ProgramData}\Amazon\ECS\data", "Machine");'
+            - '$agentVersion = "latest";'
+            - '$agentZipUri = "https://s3.amazonaws.com/amazon-ecs-agent/ecs-agent-windows-$agentVersion.zip";'
+            - '$zipFile = "${env:TEMP}\ecs-agent.zip";'
+            - 'Invoke-RestMethod -OutFile $zipFile -Uri $agentZipUri;'
+            - 'Expand-Archive -Path $zipFile -DestinationPath $ecsExeDir -Force;'
+            - 'Set-Location ${ecsExeDir};'
+            - '[bool]$EnableTaskIAMRoles = $false;'
+            - 'if (${EnableTaskIAMRoles}) {$HostSetupScript = Invoke-WebRequest https://raw.githubusercontent.com/aws/amazon-ecs-agent/master/misc/windows-deploy/hostsetup.ps1;Invoke-Expression $($HostSetupScript.Content)};'
+            - >-
+              New-Service -Name "AmazonECS" `
+                    -BinaryPathName "$ecsExeDir\amazon-ecs-agent.exe -windows-service" `
+                    -DisplayName "Amazon ECS" `
+                    -Description "Amazon ECS service runs the Amazon ECS agent" `
+                    -DependsOn Docker `
+                    -StartupType Manual;
+            - 'sc.exe failure AmazonECS reset=300 actions=restart/5000/restart/30000/restart/60000;'
+            - 'sc.exe failureflag AmazonECS 1;'
+            - 'Start-Service AmazonECS;'
+            - |
+            - 'New-NetFirewallRule -Displayname "HTTP(S) Inbound" -Profile @("Public","Private","Domain") -Direction Inbound -Action Allow -Protocol TCP -LocalPort @("80", "443");'
+            - |
+            - '#Invoke-Expression -command ((Get-ECRLoginCommand -region '
+            - !Ref 'AWS::Region'
+            - ').command);'
+              # end of script
+            - ' cfn-init.exe -v -s '
+            - !Ref 'AWS::StackId'
+            - ' -r ContainerInstances'
+            - ' --region '
+            - !Ref 'AWS::Region'
+            - |+
+
+            - ' cfn-signal.exe -e $lastexitcode --stack '
+            - !Ref 'AWS::StackName'
+            - '   --resource ECSAutoScalingGroup '
+            - '    --region '
+            - !Ref 'AWS::Region'
+            - |
+              ;
+            - |2
+              </powershell>
+            - <persist>true</persist>
+
+  service:
+    Type: 'AWS::ECS::Service'
+    DependsOn: ALBListener
+    Properties:
+      Cluster: !Ref ECSCluster
+      DesiredCount: '2'
+      LoadBalancers:
+        - ContainerName: !Join [ "-", [ !Ref stackName, "ecs", "iistest", "container" ]]
+          ContainerPort: '80'
+          TargetGroupArn: !Ref ECSTargetGroup
+      Role: !Ref ECSServiceRole
+      TaskDefinition: !Ref taskdefinition
+  ECSServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: ecs-service
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'elasticloadbalancing:DeregisterInstancesFromLoadBalancer'
+                  - 'elasticloadbalancing:DeregisterTargets'
+                  - 'elasticloadbalancing:Describe*'
+                  - 'elasticloadbalancing:RegisterInstancesWithLoadBalancer'
+                  - 'elasticloadbalancing:RegisterTargets'
+                  - 'ec2:Describe*'
+                  - 'ec2:AuthorizeSecurityGroupIngress'
+                Resource: '*'
+  ServiceScalingTarget:
+    Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
+    DependsOn: service
+    Properties:
+      MaxCapacity: 4
+      MinCapacity: 3
+      ResourceId: !Join
+        - ''
+        - - service/
+          - !Ref ECSCluster
+          - /
+          - !GetAtt
+            - service
+            - Name
+      RoleARN: !GetAtt
+        - AutoscalingRole
+        - Arn
+      ScalableDimension: 'ecs:service:DesiredCount'
+      ServiceNamespace: ecs
+  ServiceScalingPolicy:
+    Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
+    Properties:
+      PolicyName: AStepPolicy
+      PolicyType: StepScaling
+      ScalingTargetId: !Ref ServiceScalingTarget
+      StepScalingPolicyConfiguration:
+        AdjustmentType: PercentChangeInCapacity
+        Cooldown: 60
+        MetricAggregationType: Average
+        StepAdjustments:
+          - MetricIntervalLowerBound: 0
+            ScalingAdjustment: 200
+  ALB500sAlarmScaleUp:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      EvaluationPeriods: '1'
+      Statistic: Average
+      Threshold: '10'
+      AlarmDescription: Alarm if our ALB generates too many HTTP 500s.
+      Period: '60'
+      AlarmActions:
+        - !Ref ServiceScalingPolicy
+      Namespace: AWS/ApplicationELB
+      Dimensions:
+        - Name: ECSService
+          Value: !Ref service
+      ComparisonOperator: GreaterThanThreshold
+      MetricName: HTTPCode_ELB_5XX_Count
+
+#  EC2Role:
+#    Type: 'AWS::IAM::Role'
+#    Properties:
+#      AssumeRolePolicyDocument:
+#        Statement:
+#          - Effect: Allow
+#            Principal:
+#              Service:
+#                - ec2.amazonaws.com
+#            Action:
+#              - 'sts:AssumeRole'
+#      Path: /
+#      Policies:
+#        - PolicyName: ecs-service
+#          PolicyDocument:
+#            Statement:
+#              - Effect: Allow
+#                Action: '*'
+#                Resource: '*'
+
+  AutoscalingRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - application-autoscaling.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: service-autoscaling
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'application-autoscaling:*'
+                  - 'cloudwatch:DescribeAlarms'
+                  - 'cloudwatch:PutMetricAlarm'
+                  - 'ecs:UpdateService'
+                  - 'ecs:DescribeServices'
+                Resource: '*'
+
+  EC2InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: /
+      Roles:
+        - !Ref ecsRole
+
+Outputs:
+  ecsservice:
+    Value: !Ref service
+  ecscluster:
+    Value: !Ref ECSCluster
+  ECSALB:
+    Description: Your ALB DNS URL
+    Value: !Join
+      - ''
+      - - !GetAtt
+          - ECSALB
+          - DNSName
+  taskdef:
+    Value: !Ref taskdefinition

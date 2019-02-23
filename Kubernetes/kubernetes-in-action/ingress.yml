@@ -1,0 +1,17 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: kubia
+spec:
+  rules:
+# hostname for the service. This is what the ingress is listening for
+  - host: minikube.eddy.com
+    http:
+      paths:
+# Path to listen for
+      - path: /test
+        backend:
+# Name of the service to route requests to
+          serviceName: kubia-nodeport
+# Port that the backend service is listening on
+          servicePort: 80

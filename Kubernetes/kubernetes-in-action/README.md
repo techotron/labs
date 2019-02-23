@@ -25,4 +25,8 @@ You can check the endpoint like any other resource:
 ```bash
 k get endpoint kubia
 ```
-
+##### Create node port
+This is a mapping of a k8s node port to a port for a pod
+````bash
+k create -f ./nodeport.yml
+````

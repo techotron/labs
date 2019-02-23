@@ -30,3 +30,13 @@ This is a mapping of a k8s node port to a port for a pod
 ````bash
 k create -f ./nodeport.yml
 ````
+
+#### Ingress
+Maps a frontend service to a backend. Operates on layer 7 so has the flexibility to route hostname/app1 and hostname/app2 to different services and therefore pods.
+<br>
+Requires an ingress controller. This can be enabled with minikube with `minikube addons enable ingress`
+<br>
+The below will route requests to the `host/test` value of the template to `kubia-nodeport` service
+```bash
+k create -f ./ingress.yml
+```

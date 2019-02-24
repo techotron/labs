@@ -32,7 +32,7 @@ k create -f ./nodeport.yml
 ````
 
 #### Ingress
-Maps an ingress controller to a service. Operates on <u>layer 7</u> so has the flexibility to route hostname/app1 and hostname/app2 to different services and therefore pods.
+Maps an ingress controller to a pod. Operates on <u>layer 7</u> so has the flexibility to route hostname/app1 and hostname/app2 to different services and therefore pods.
 <br>
 Requires an ingress controller. This can be enabled with minikube with `minikube addons enable ingress`. Get the IP of the controller with `minikube service list` - you're looking for the "default-http-backend"
 <br>
@@ -52,3 +52,17 @@ k create -f ./ingress.yml
 2. DNS resolves this to the IP of the ingress controller
 3. Client sends HTTP request to the ingress controller with `minikube.eddy.com` in the host header
 4. From the header, the controller determines the service that the client is trying to access, looked up the pod IPs via the Endpoints object associated with the service and forwarded the request to one of the pods.
+<b>Note:</b> The ingress controller doesn't forward requests to the service, rather it gets the endpoints from the service and forwards to the pods directly. Most ingress controllers work like this.
+<br><br>
+![Image of Ingress](./imgs/ingress.png)
+
+##### Enabling HTTPS for an ingress
+1. Create a self signed certificate and key
+```bash
+openssl genrsa -out tls.key 2048
+openssl req -new -x509 -key tls.key -out tls.cert -days 360 -subj /CN=minikube.eddy.com
+```
+2. Then create a secret from the 2 files
+```bash
+k create secret tls tls-secret --cert=tls.cert --key=tls.key
+```

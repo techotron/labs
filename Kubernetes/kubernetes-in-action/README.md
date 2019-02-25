@@ -57,7 +57,7 @@ k create -f ./ingress.yml
 ![Image of Ingress](./imgs/ingress.png)
 
 ##### Enabling HTTPS for an ingress
-1. Create a self signed certificate and key
+1. Create a self signed certificate and key (page 241)
 ```bash
 openssl genrsa -out tls.key 2048
 openssl req -new -x509 -key tls.key -out tls.cert -days 360 -subj /CN=minikube.eddy.com

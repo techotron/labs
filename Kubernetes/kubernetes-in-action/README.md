@@ -66,3 +66,31 @@ openssl req -new -x509 -key tls.key -out tls.cert -days 360 -subj /CN=minikube.e
 ```bash
 k create secret tls tls-secret --cert=tls.cert --key=tls.key
 ```
+
+3. Deploy the app using the following template:
+```bash
+k create -f ingress-tls.yml
+```
+or if the deployment already exists, update it:
+```bash
+k apply -f ingress-tls.yml
+```
+
+#### Readiness Probes
+- A failed readiness probe removes the pod IP from the list of endpoints for the associated service.
+- They will not kill or restart a container. Liveness probes will but readiness probes won't.
+- You configure a time to wait before the readiness probe starts polling.
+- The readiness probe polls at certain intervals (10 seconds by default).
+- An example of where you'd use one:
+  - Your app has front end pods which connect to a back end database.
+  - Your front end pods have connectivity problems to the database
+  - You'd want the readiness probe to fail, which would remove the pod IP from the service (but not kill the pod).
+  - This is different to a liveness probe which (if it had the same check) would kill the pod - even though there's nothing wrong with the pod.
+  
+#### Run a single pod with the dnsutils tools, on the fly
+```bash
+k run dnsutils --image=tutum/dnsutils --generator=run-pod/v1 --command -- sleep infinity
+```
+Note: the `--generator=run-pod/v1` part tells K8s to create a pod without a replication controller or similar behind it.
+
+### Chapter 6

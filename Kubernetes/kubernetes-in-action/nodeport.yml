@@ -13,3 +13,4 @@ spec:
     nodePort: 30123
   selector:
     app: kubia
+    enabled: "true"

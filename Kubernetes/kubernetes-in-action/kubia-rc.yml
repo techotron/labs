@@ -11,10 +11,24 @@ spec:
     metadata:
       labels:
         app: kubia
+# If you configure the service selector to look for "enabled"="true" then you can add/remove pods from the list of endpoints for the service by
+#  changing this label value on the fly. It's like a cheeky on/off flag which can be useful in testing. It only works if this is added to the
+#  label selector for the associated service.
+        enabled: "true"
     spec:
       containers:
         - name: kubia
           image: luksa/kubia
+# This readiness probe is configured to run a command. If the "ready" file exists in the /var directory, it'll return a zero exit code and will
+#  be deemed "ready". If it's a non-zero exit code, K8s will not deem the pod to be ready.
+# NOTE: the below is commented out because the image doesn't have (and won't add later) the /var/ready file - so the pod will never be ready. I
+#  wanted to add it to the template for reference.
+#
+#          readinessProbe:
+#            exec:
+#              command:
+#              - ls
+#              - /var/ready
           ports:
           - name: http
             containerPort: 8080

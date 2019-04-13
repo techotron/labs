@@ -94,3 +94,39 @@ k run dnsutils --image=tutum/dnsutils --generator=run-pod/v1 --command -- sleep 
 Note: the `--generator=run-pod/v1` part tells K8s to create a pod without a replication controller or similar behind it.
 
 ### Chapter 6
+
+#### - Non-Persistent Storage -
+#### Creating shared volumes with "emptyDir" type
+
+This will deploy an app (built from ./dockerfiles-fortune) which will write a file of random quotes, using the "fortune" application. The web-server component of this (running nginx:alpine) will serve this quote as an HTML file
+
+```bash
+k create -f fortune-pod.yml
+k port-forward fortune 8080:80
+```
+
+You can create the emptyDir volume on the host's memory with the following template:
+
+```bash
+k create -f fortune-pod-volume-in-memory.yml
+```
+
+#### Create a shared volume with "gitRepo" type
+
+This will deploy a shared volume, similar to the "emptyDir" type except it will clone the contents of a git repo into it. The contents of the repo is only copied when the pod is created so in order to update the content of the volume, you'd have to delete the pod and recreate it (or deploy the pod using a replication controller and only delete the pod).
+
+```bash
+k create -f gitrepo-volume-pod.yml
+k port-forward gitrepo-volume-pod 8080:80
+```
+
+Note: You can't clone from a private repo. The K8s devs wanted to keep the volume type simple so cloning from a private repo would need to be done via a git sync sidecar.
+
+#### - Persistent Storage - 
+#### Create a hostPath volume
+
+This is a mounted path from the k8s worker nodes filesystem. The data exists on the worker node so any pod scheduled to that specific node and has config which will map a volume to that path will see the data. .
+
+They are typically used to give access of the hosts' filesystem to the pods (eg to consume log files, CA certificates or the K8s config file (kubeconfig)).
+
+Note: Only use `hostPath` if you need to read/write system files on the worker node. They should not be used to persist data across pods.

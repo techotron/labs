@@ -151,3 +151,8 @@ Example of how it should look if sucessfull:
 ![Image of Ingress](./imgs/mongodb-test-access.png)
 
 The rest of the MongoDB commands to create a simple JSON document can be found on page 276 (ebook version)
+
+#### Persistent Volumes (and PV Claims)
+
+They work like this:
+![Image of Ingress](./imgs/persistent-vol-claims.png)

@@ -249,6 +249,11 @@ kubectl -n=ops create secret tls <name_of_secret> --cert=tls.crt --key=tls.key
 
 ## Help Commands
 
+List K8s resources
+```bash
+kubectl api-resources
+```
+
 Detail pod config manifests
 ```buildoutcfg
 kubectl explain pods

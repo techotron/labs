@@ -130,3 +130,24 @@ This is a mounted path from the k8s worker nodes filesystem. The data exists on 
 They are typically used to give access of the hosts' filesystem to the pods (eg to consume log files, CA certificates or the K8s config file (kubeconfig)).
 
 Note: Only use `hostPath` if you need to read/write system files on the worker node. They should not be used to persist data across pods.
+
+In order to create a directory on the minikube node, you have to SSH onto it and create the directory:
+
+```bash
+minikube ssh
+sudo mkdir -p /k8s/volumes/hostpath/mongodb
+```
+
+#### Deploy mongodb container using the above created hostPath
+
+This will create the container running MongoDb (using a host path on the minikube node). The second command will test access to the the mongodb server. 
+
+```bash
+k create -f mongodb-pod-hostpath-pd.yml
+k exec -it mongodb mongo
+```
+
+Example of how it should look if sucessfull:
+![Image of Ingress](./imgs/mongodb-test-access.png)
+
+The rest of the MongoDB commands to create a simple JSON document can be found on page 276 (ebook version)

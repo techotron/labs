@@ -1,0 +1,11 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast
+# This defines what provisioner should be used. Info on the options available are here: https://kubernetes.io/docs/concepts/storage/storage-classes/
+provisioner: k8s.io/minikube-hostpath
+parameters:
+  type: pd-ssd
+
+# Default is "delete". Retain as below doesn't seem to work but this might be a minikube thing.
+#reclaimPolicy: Retain

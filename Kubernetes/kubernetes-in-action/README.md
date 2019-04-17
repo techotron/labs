@@ -1,4 +1,5 @@
 ## Notes for going through the Kubernetes in Action
+Github link: https://github.com/luksa/kubernetes-in-action
 ### Chapter 4
 ##### Create replication controller
 ```bash
@@ -148,11 +149,80 @@ k exec -it mongodb mongo
 ```
 
 Example of how it should look if sucessfull:
-![Image of Ingress](./imgs/mongodb-test-access.png)
+![Test Mongo Access](./imgs/mongodb-test-access.png)
 
 The rest of the MongoDB commands to create a simple JSON document can be found on page 276 (ebook version)
+
+Test MongoDB commands to check existing document:
+```bash
+use mystore
+db.foo.find()
+```
 
 #### Persistent Volumes (and PV Claims)
 
 They work like this:
-![Image of Ingress](./imgs/persistent-vol-claims.png)
+![PVC1](./imgs/persistent-vol-claims.png)
+
+**Note:** PVs do not belong to any namespace. They are cluster-level resources (like nodes). Persistent Volume Claims however ___do___ belong to a namespace and can only be used by pods in the same namespace.
+
+![Image of PVC2](./imgs/persistent-vol-claims2.png)
+
+Create a persistent volume (which maps to the same hostPath directoy on the minikube node) like this:
+
+```bash
+k create -f mongodb-hostpath-pv.yml
+```
+
+To create the claim, run:
+
+```bash
+k create -f mongodb-hostpath-pvc.yml
+```
+
+If you list the PVCs, you'll notice that the claim is bound to the persistent volume that was created earlier.
+
+The access modes:
+
+|Access Mode|Meaning|Use|
+|---|---|---|
+|ROW|ReadWriteOnce|Only a single node and mount a volume|
+|ROX|ReadOnlyMany|Multiple nodes can mount a volume for reading|
+|RWX|ReadWriteMany|Multiple nodes can mount a volume for read/write|
+
+**Note:** The above access modes are for ___nodes___, not pods.
+
+To deploy a mongoDB pod, using this new PVC, run: 
+
+```bash
+k create -f mongodb-pod-pvc.yml
+```
+
+#### Dynamic PV Provisioning
+
+Instead of the cluster admin creating the persistent volumes before hand, you can deploy a persistent volume provisioner and define one or more StorageClass objects and let users choose what they want. Users can refer to the StorageClass in their PVC. StorageClass objects are not namespaced..
+
+With minikube, you can test this by deploying the following provisioner
+
+```bash
+k create -f storageclass-fast-hostpath.yml
+```
+
+**Note:** This creates a storage class resource which will be used by PVC to create new PV on the fly. The concept of PVC and PVs is still the same, the difference is that the PVs don't have to exist beforehand.
+
+Then create a PV by deploying the following PVC:
+
+```bash
+k create -f mongodb-storageclass-pvc.yml
+```
+
+**Note:** This creates a hostPath PV on the minikube node. The StorageClass provisioner has done this when the PVC was created.
+
+The point of StorageClasses is that they're referable by name and are therefore easily portable to other clusters (providing the StorageClasses with the same name exist there)
+
+The below image illistrates how storage classes work:
+
+![Storage Classes](./imgs/storage-classes.png)
+
+### Chapter 7
+#### Config Maps and Secrets

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mongodb-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadWriteOnce
+  - ReadOnlyMany
+# This tells k8s to retain the volume and its contents after it's released from its claim. To release the volume, you would have to delete the PV and recreate.
+#  The contents would still exist in the underlying storage but it would be up to the next pod it's bound to, to decide with what to do with it.
+#  Different policies can be:
+#  - Recycle (deletes contents and makes the volume available again)
+#  - Delete (deletes the underlying storage [not available for cloud based storage like GCE (might be outdated info)])
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    # directory location on host (on the minikube node in the README example)
+    path: /k8s/volumes/hostpath/mongodb
+    type: Directory

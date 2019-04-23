@@ -226,3 +226,10 @@ The below image illistrates how storage classes work:
 
 ### Chapter 7
 #### Config Maps and Secrets
+
+##### CMD, Entrypoint Terminology
+
+The terminology differences between Dockerfiles and Kubernetes:
+
+![Terminology Table](./imgs/cmd-entrypoint-table.png)
+

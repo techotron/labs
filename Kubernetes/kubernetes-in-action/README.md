@@ -225,7 +225,7 @@ The below image illistrates how storage classes work:
 ![Storage Classes](./imgs/storage-classes.png)
 
 ### Chapter 7
-#### Config Maps and Secrets
+#### Config Maps
 
 ##### CMD, Entrypoint Terminology
 
@@ -233,3 +233,137 @@ The terminology differences between Dockerfiles and Kubernetes:
 
 ![Terminology Table](./imgs/cmd-entrypoint-table.png)
 
+##### Parameters and Environment Variables
+
+Rather than hard coding values in pods, you can override the arguments that are used by the container. In this example, the html-generator script has been changed to use a script parameter as the value for the sleep interval
+```bash
+k create -f ./fortune-pod-arg.yml
+```
+
+You can pass varying parameters as environment variables via the pod template, eg:
+
+```bash
+k create -f ./fortune-pod-env.yml
+```
+
+##### Creating Config Maps
+
+Config maps are a Kubernetes resource which store key-value data which pods can use. The pods don't need to know they're using config maps which keeps them Kubernetes agnostic. You can deploy config maps with the same name in different namespaces which allows pods in different namespaces to inherit different values, based on the namespace they've been deployed in (eg, dev or prod)
+
+**Note:** Config Map keys _must_ be a valid DNS subdomain
+
+Create a config map directly using kubectl:
+
+```bash
+k create configmap fortune-config --from-literal=sleep-interval=25 --from-literal=foo=bar --from-literal=one=two
+```
+
+Alternatively, create the config map from a file:
+
+```bash
+k create -f ./fortune-config.yml
+```
+
+Configmaps can store entire config data which can be read from a file:
+
+This will read the contents of `config-file.conf` in the working directory and add it as a key named after the file name
+
+```bash
+k create configmap my-config --from-file=config-file.conf
+```
+
+Alternatively, specify the key:
+
+```bash
+k create configmap my-config --from-file=customkey=config-file.conf
+```
+
+If you want to add all files in the directory, you can add all like this:
+This will create an individual map entry for each file in the directory.
+
+```bash
+k create configmap my-config --from-file=/path/to/dir
+```
+
+You can mix the varying types of keys from above:
+
+```bash
+k create configmap my-config \
+    --from-file=foo.json \
+    --from-literal=foo=bar \
+    --from-file=/path/to/dir
+```
+
+##### Using Config Maps
+
+**IMPORTANT NOTE:** When using environment variables or args, the pods would need to be restarted for the containers to recognise the change. Using volume mounts do not require the pods to be restart as the new contents of the mounted volumes are updated live. HOWEVER, you may need to include some logic in the processes in the container which reload in order to "see" the new files in the mounted volumes.
+You can pass a ConfigMap entry as an environment variable. Eg:
+
+```bash
+k create -f ./fortune-config.yml
+k create -f ./fortune-pod-env-configmap.yml
+```
+
+**Note:** If the ConfigMap doesn't exist when the pod starts, it will fail _until_ the ConfigMap is created. If you want to override this and have the pod start even if the ConfigMap isn't available you can mark the reference as optional by setting `configMapKeyRef.optional: true`
+
+You can create all contents of the config map as environment variables at once, eg:
+
+```bash
+k create -f ./fortune-config.yml
+k create -f ./fortune-pod-env-configmap2.yml
+```
+
+**Note:** This will create 2 env vars called `CONFIG_foo` and `CONFIG_one` but not one called `CONFIG_sleep-interval` because this is not a valid env var (with the dash)
+
+You can pass the values of the ConfigMap as arguments to the main container process by using env vars, eg:
+
+```bash
+k create -f ./fortune-pod-args-configmap.yml
+```
+
+You can present the value of the config maps as a configmap volume, This will create the contents of the config map as files in the container. This example will pass the nginx.conf to the web-server container as a configmap.
+
+**IMPORTANT NOTE:** This is simply mounting a volume but using config maps as the contents. This means the same rules apply when mounting any other volume, namely: any contents in the path from the container will get masked by the new volume mount.
+
+First, we create the configmap using files in the ./configmap-files directory.
+Then we create the pod with a volume which contains the values of the configmap
+
+```bash
+k create configmap fortune-config --from-file=configmap-files
+k create -f ./fortune-pod-volume-configmap.yml
+```
+
+**Note:** This doesn't overwrite the value of the default nginx conf file in /etc/nginx/nginx.conf but will map the file to /etc/nginx/conf.d/ which nginx loads *.conf files by default.
+
+Test this has worked by forwarding the port and checking the response headers:
+
+```bash
+k port-forward fortune-vol-configmap 8080:80
+curl -H "Accept-Encoding: gzip" -I localhost:8080
+```
+
+The only problem with the above is that it maps all of the contents of ./configmap-files to /etc/nginx/conf.d whereas we only want the nginx .conf file there. We can specify which files are copied there with an item selector:
+
+```bash
+k create -f ./fortune-pod-volume-configmap2.yml
+k exec -it forturn-vol-configmap --container web-server -- ls /etc/nginx/conf.d
+```
+
+**Note:** Expected outcome, the file `gzip.conf` is listed
+
+The above methods are fine if you want to mount a volume to an empty path but if you wanted to add a file to the /etc directory, you couldn't use this method. Instead, you can use the subPath property of the volumeMounts config:
+
+```bash
+k create -f ./fortune-pod-volume-configmap3.yml
+k exec -it forturn-vol-configmap --container web-server -- ls /etc/nginx/conf.d
+```
+
+##### Notes about updating files in the volume mounts
+
+- Changes to configmaps are often seen on the pods around 1 minute from making the change
+- The changes are atomic, meaning changes to all files in the mount happen at the same time. 
+- The above is achieved by Kubernetes using symbolic links. K8s copies the files to a new directory and when all the files have been copied, it changes the symbolic links, making the change instant.
+- If a single file has been mounted to a volume, then this WILL NOTE GET UPDATED. Only full volume mounts get updated live.
+- If multiple pods are using the same configmap as a mounted volume, it's possible for the files changes between different pods to be out of sync whilst the kubernetes copies the files to the new directory.
+
+#### Secrets

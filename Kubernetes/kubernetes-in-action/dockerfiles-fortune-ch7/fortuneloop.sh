@@ -1,7 +1,7 @@
 #!/bin/bash
 
 trap "exit" SIGINT
-INTERVAL=$1
+#INTERVAL=$1
 echo Configured to generate new fortune every $INTERVAL seconds
 mkdir  /var/htdocs
 while :

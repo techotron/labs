@@ -485,4 +485,7 @@ This will create a secret with a single entry called `.dockercfg` which is the e
 
 Add this to the spec in the pod manifest. Commented example is in ./fortune-pod-env-configmap-secret.yml
 
+### Chapter 8
+#### Pod Metadata
+
 

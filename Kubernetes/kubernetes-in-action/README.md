@@ -103,7 +103,7 @@ This will deploy an app (built from ./dockerfiles-fortune) which will write a fi
 
 ```bash
 k create -f fortune-pod.yml
-k port-forward fortune 8080:80
+k port-forward fortune 8080:80 &
 ```
 
 You can create the emptyDir volume on the host's memory with the following template:
@@ -118,7 +118,7 @@ This will deploy a shared volume, similar to the "emptyDir" type except it will 
 
 ```bash
 k create -f gitrepo-volume-pod.yml
-k port-forward gitrepo-volume-pod 8080:80
+k port-forward gitrepo-volume-pod 8080:80 &
 ```
 
 Note: You can't clone from a private repo. The K8s devs wanted to keep the volume type simple so cloning from a private repo would need to be done via a git sync sidecar.
@@ -338,7 +338,7 @@ k create -f ./fortune-pod-volume-configmap.yml
 Test this has worked by forwarding the port and checking the response headers:
 
 ```bash
-k port-forward fortune-vol-configmap 8080:80
+k port-forward fortune-vol-configmap 8080:80 &
 curl -H "Accept-Encoding: gzip" -I localhost:8080
 ```
 
@@ -367,3 +367,122 @@ k exec -it forturn-vol-configmap --container web-server -- ls /etc/nginx/conf.d
 - If multiple pods are using the same configmap as a mounted volume, it's possible for the files changes between different pods to be out of sync whilst the kubernetes copies the files to the new directory.
 
 #### Secrets
+
+- Secrets hold any sensitive information. 
+- Like ConfigMaps, they are key value pairs. 
+- Since v1.7, they are encrypted and stored in etcd.
+- Secrets are only distributed to nodes which run pods that require the secrets 
+- They are always stored in memory and never written to physical storage (not yet sure if this includes the etcd store)
+- All pods are given a default secret which is made of a .crt, namespace and token. This is used by the pod should it need to communicate with the Kubernetes APIs.
+- Secrets have a 1MB limit.
+
+The secrets are mounted as a volume on the pod. The location of the path and the secrets which the pod has mounted using `k describe pods`
+
+![Secrets Volume](./imgs/secrets-mounted-vol.png)
+
+##### Creating a secret
+
+Very similar process to creating a ConfigMap
+
+We'll create a certificate locally (and an extra file to demonstrate that the data is encrypted)
+
+```bash
+openssl genrsa -out ./certs/https.key 2048
+openssl req -new -x509 -key ./certs/https.key -out ./certs/https.cert -days 3650 -subj /CN=minikube.eddy.com
+echo bar > ./certs/foo
+
+k create secret generic fortune-https --from-file=./certs/https.key --from-file=./certs/https.cert --from-file=./certs/foo
+k get secrets fortune-https -o yaml
+```
+
+- The value of the secret is stored in Base64-encoded strings
+- By using Base-64 encoding we can also store binary data as plain-text strings
+
+**Note:** You'd need to update the `fortune-config` ConfigMap so that the nginx.conf file includes the ssl information before deploying the next pod:
+
+```bash
+k create -f ./fortune-pod-env-configmap-secret.yml
+k port-forward fortune-https 8443:443 & 
+```
+
+This illustrates what is happening with this pod:
+
+![Pod Using Secret](./imgs/secrets-used-in-pod.png)
+
+
+Check that the pod is using the new certificate:
+
+```bash
+curl -k -v https://localhost:8443
+```
+
+expected result:
+
+> ➜  kubernetes-in-action git:(master) ✗ curl -k -v  https://localhost:8443
+> Rebuilt URL to: https://localhost:8443/
+>   Trying ::1...
+> TCP_NODELAY set
+> Connected to localhost (::1) port 8443 (#0)
+>Handling connection for 8443
+> ALPN, offering h2
+> ALPN, offering http/1.1
+> Cipher selection: ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH
+> successfully set certificate verify locations:
+>   CAfile: /etc/ssl/cert.pem
+>  CApath: none
+> TLSv1.2 (OUT), TLS handshake, Client hello (1):
+> TLSv1.2 (IN), TLS handshake, Server hello (2):
+> TLSv1.2 (IN), TLS handshake, Certificate (11):
+> TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+> TLSv1.2 (IN), TLS handshake, Server finished (14):
+> TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+> TLSv1.2 (OUT), TLS change cipher, Client hello (1):
+> TLSv1.2 (OUT), TLS handshake, Finished (20):
+> TLSv1.2 (IN), TLS change cipher, Client hello (1):
+> TLSv1.2 (IN), TLS handshake, Finished (20):
+> SSL connection using TLSv1.2 / ECDHE-RSA-CHACHA20-POLY1305
+> ALPN, server accepted to use http/1.1
+> Server certificate:
+>  subject: CN=minikube.eddy.com
+>  start date: Apr 25 21:42:50 2019 GMT
+>  expire date: Apr 22 21:42:50 2029 GMT
+>  issuer: CN=minikube.eddy.com
+>  SSL certificate verify result: self signed certificate (18), continuing anyway.
+> GET / HTTP/1.1
+> Host: localhost:8443
+> User-Agent: curl/7.54.0
+> Accept: */*
+> 
+> HTTP/1.1 200 OK
+> Server: nginx/1.15.11
+> Date: Thu, 25 Apr 2019 23:10:58 GMT
+
+##### Secrets in Memory
+
+The secret is mounted in the pod from an in-memory filesystem (tmpfs). You can see this by listing the mounts in the container:
+
+```bash
+k exec fortune-https -c web-server -- mount | grep certs
+```
+
+Will return:
+
+>tmpfs on /etc/nginx/certs type tmpfs (ro,relatime)
+
+The secret could have been exposed to the pod as environment variables rather than a volume. You'd so this the same way as you could from a ConfigMap, example is commented out in the ./fortune-pod-env-configmap-secret.yml manifest
+
+##### Image Pull Secrets
+
+Store private registry passwords as secrets for Kubernetes to pull images from them
+
+This will create a secret of type: "docker-registry"
+
+```bash
+k create secret docker-registry mydockerhubsecret --docker-username=myusername --docker-password=mypassword --docker-email=my.email@provider.com
+```
+
+This will create a secret with a single entry called `.dockercfg` which is the equivalent to the .dockercfg file created when you run the `docker login` command
+
+Add this to the spec in the pod manifest. Commented example is in ./fortune-pod-env-configmap-secret.yml
+
+

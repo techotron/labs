@@ -530,8 +530,116 @@ You can define an downward API mount rather than exposing details via environmen
 
 **Note:** It's possible to change the permissions of these files in the same way as in ConfigMaps, using the `defaultMode` property in the pod spec
 
-#### Kubernetes API Server
+#### Kubernetes REST API
 
+Get the API URL with `k cluster-info`
 
+It's not easy to access it directly but you can by the `kubectl proxy` command. This will accept an HTTP connection on the local machine and proxies them to the API server whilst taking care of authentication. To run the proxy:
 
+```bash
+k proxy
+```
+
+Kubectl knows all the auth settings and URLs so this command is all that's needed.
+
+So now you connect to the API via this proxy connection with:
+
+```bash
+curl localhost:8001
+```
+
+For example, to list jobs by using the API, deploy a job run the request:
+
+```bash
+k create -f ./my-job.yml
+curl http://localhost:8001/apis/batch/v1/jobs
+```
+
+##### REST API from within a pod
+
+To talk to the REST API from a pod, you need to do the following:
+
+- Locate API server
+- Confirm identity of API server (and not an impersonation)
+- Authenticate with API server
+
+We can test this from a pod, then execute a shell session to test API access:
+
+```bash
+k create -f ./pod-curl.yml
+k exec -it curl bash
+```
+
+Now we're in the pod, we can start with the 3 tasks above:
+
+```bash
+# The location is included in the env vars by default. We could have also used the DNS name of the service in Kubernetes.
+curl https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT
+# This complains about a certificate error. So we'll try with the secret that's mounted by default. (We could use the -k flag but this makes us susceptable to man-in-the-middle attacks.)
+
+# We can verify the server by specifying the CA cert it was signed with
+curl --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT
+# We now get a 403 response.
+# We'll make a CURL_CA_BUNDLE env var to make this easier from now on:
+
+export CURL_CA_BUNDLE=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+# Lastly, we need to authenticate with it. You can do this using the token that's including in the default-token secret:
+TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+curl -H "Authorization: Bearer $TOKEN" https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT
+```
+**Note:** This may not work if you have RBAC enabled. The simplest way to get around this is to run the following:
+
+```bash
+k create clusterrolebinding permissive-binding --clusterrole=cluster-admin --group=system:serviceaccounts
+```
+
+You can get the namespace that a pod is running in by using the details included in the secrets vol mount:
+
+```bash
+NS=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+curl -H "Authorization: Bearer $TOKEN" https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namepsaces/$NS/pods
+```
+
+![REST API Access](./imgs/rest-api-access.png)
+
+##### REST API via an ambassador container
+
+Like using `kubectl proxy` in a sidecar container and using the pod's loopback address to access it.
+
+```bash
+k create -f ./pod-curl-ambassador.yml
+k exec -it curl-with-ambassador -c main bash
+```
+
+Now you can access the REST API from the main container, using `curl http://localhost:8001`
+
+##### REST API using client libraries
+
+2 libraries exist that are officially supported by the API Machinery special interest group (SIG):
+
+- Golang client: https://github.com/kubernetes/client-go
+- Python: https://github.com/kubernetes-incubator/client-python
+
+Multiple user-contributed client libraries:
+
+- Java client by Fabric8: https://github.com/fabric8io/kubernetes-client
+- Java client by Amdatu: https://bitbucket.org/amdatulabs/amdatu-kubernetes 
+- Node.js client by tenxcloud: https://github.com/tenxcloud/node-kubernetes-client 
+- Node.js client by GoDaddy: https://github.com/godaddy/kubernetes-client 
+- PHP: https://github.com/devstub/kubernetes-api-php-client 
+- Another PHP client: https://github.com/maclof/kubernetes-client 
+- Ruby: https://github.com/Ch00k/kubr 
+- Another Ruby client: https://github.com/abonas/kubeclient 
+- Clojure: https://github.com/yanatan16/clj-kubernetes-api 
+- Scala: https://github.com/doriordan/skuber 
+- Perl: https://metacpan.org/pod/Net::Kubernetes
+
+**Note:** Check ebook page 372 for an example of a Fabric8 Java Client
+
+##### Swagger API
+
+Kubernetes has a list of swagger API definitions but also has Swagger UI integrated into the API server. You can enable it with the `--enable-swagger-ui=true` or with minikube, when you start the cluster: `minikube start --extra-config=apiserver.Features.Enable-SwaggerUI=true`. You can then get to it using the /swagger-ui URI.
+
+### Chapter 9 - Deployments
 

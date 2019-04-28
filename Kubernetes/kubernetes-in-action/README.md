@@ -6,7 +6,8 @@ Github link: https://github.com/luksa/kubernetes-in-action
 k create -f ./kubia-rc.yml
 ```
 
-### Chapter 5
+### Chapter 5 - Services and Ingress
+#### Services
 ##### Create service
 ```bash
 k create -f ./kubia-svc.yml
@@ -94,7 +95,7 @@ k run dnsutils --image=tutum/dnsutils --generator=run-pod/v1 --command -- sleep 
 ```
 Note: the `--generator=run-pod/v1` part tells K8s to create a pod without a replication controller or similar behind it.
 
-### Chapter 6
+### Chapter 6 - Storage
 
 #### - Non-Persistent Storage -
 #### Creating shared volumes with "emptyDir" type
@@ -224,7 +225,7 @@ The below image illistrates how storage classes work:
 
 ![Storage Classes](./imgs/storage-classes.png)
 
-### Chapter 7
+### Chapter 7 - Secrets and ConfigMaps
 #### Config Maps
 
 ##### CMD, Entrypoint Terminology
@@ -485,7 +486,52 @@ This will create a secret with a single entry called `.dockercfg` which is the e
 
 Add this to the spec in the pod manifest. Commented example is in ./fortune-pod-env-configmap-secret.yml
 
-### Chapter 8
-#### Pod Metadata
+### Chapter 8 - Pod Metadata
+#### Downward API
+##### Downward API using Env Vars
+The Downward API enables you to expose the pod's own metadata to the processes running inside the pod. It allows you to pass the following information:
+
+![Downward API Info](./imgs/downward-api-info.png)
+
+Using the downward API, you're able to keep your application Kubernetes agnostic however, you're only able to use it for the above list of metadata.
+
+For resource values, you use a divisor which is used to return a value as a known unit. 
+
+An example of exposing data as env vars:
+
+```bash
+k create -f ./downward-api-env.yml
+k exec downward env
+```
+
+An example of exposing data as a volume mount:
+
+```bash
+k create -f ./doward-api-volume.yml
+k exec downward -- cat /etc/downward/annotations
+```
+
+Valid divisors for memory limits/requests are:
+
+- 1 (byte)
+- 1k (kilobyte)
+- 1Ki (kibibyte)
+- 1M (megabyte)
+- 1Mi (mebibyte)
+etc
+
+The unit for CPU requests are: `1m` or milli-core. These are 1/1000th of a CPU core.
+
+##### Downward API Volume
+
+You can define an downward API mount rather than exposing details via environment variables. You can _only_ do this for a pod's labels or annotations. The reason for this is because the values of annotations and labels can be updated on the fly. If this is done then the files in the mounted volume are also updated but this dynamic updating of values isn't available for environment variables.
+
+![Downward API Volume](./imgs/downward-api-volume.png)
+
+**Note:** It's possible to change the permissions of these files in the same way as in ConfigMaps, using the `defaultMode` property in the pod spec
+
+#### Kubernetes API Server
+
+
 
 

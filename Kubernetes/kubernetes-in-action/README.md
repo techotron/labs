@@ -643,3 +643,154 @@ Kubernetes has a list of swagger API definitions but also has Swagger UI integra
 
 ### Chapter 9 - Deployments
 
+Create new kubia replication controller, service and ingress, running v1:
+
+```bash
+k create -f kubia-rc-and-service-v1.yml
+```
+
+An old method of triggering a rolling update is by using kubectl:
+
+```bash
+while true; curl http://minikube.eddy.com/ && sleep 1; done
+k rolling-update kubia-v1 kubia-v2 --image=luksa/kubia:v2
+```
+
+This does the following:
+* Create new RC using old RC as base (but with different image)
+* Add label to old pods called "deployment: 1234zxc"
+* Add label selector to old RC called "deployment: 1234zxc"
+* Add label to new pods called "deployment: 4321qwerty"
+* Add label select to new RC called "deployment: 4321qwerty"
+* The old RC is scaled down, whilst the new RC is scaled up until the old RC as 0 pods.
+* When the old RC has 0 pods, the old RC is deleted
+
+This whole processes relies on the kubectl client having access to the API server.
+It's also imperative and k8s strengths are in it's declarative model. 
+These are the main reasons it's an obsolete method of performing rolling updates.
+
+#### Deployments
+
+When you create a deployment, a ReplicaSet is actually created underneath.
+
+A deployment is the resource which coordinates the old and new ReplicaSets when you deploy a new release.
+
+Deploy a deployment:
+
+```bash
+k create -f ./kubia-deployment-v1.yml --record
+``` 
+**Note:** The `--record` will record the command in the revision history
+
+You can check the status of the deployment with:
+
+```bash
+k rollout status deployment kubia
+```
+
+The deployment will create a ReplicaSet which will create the pods:
+
+![Replica Set Hash](./imgs/replica-set-hash.png)
+
+The alpha-numeric name after "kubia" is the hash of the pod template.
+
+There are the following deployment strategies:
+* RollingUpdate (default)
+* Recreate (delete old pods. Create new ones)
+
+To view a RollingUpdate in process, we'll need to slow it down by adding a delay:
+
+```bash
+k patch deployment kubia -p '{"spec": {"minReadySeconds": 10}}'
+```
+
+We can now change the image defined in the deployment with a kubectl set command:
+
+```bash
+k set image deployment kubia nodejs=luksa/kubia:v2
+```
+**Note:** Changing this will trigger a new deployment. It'll be a rolling update because the strategy hasn't been defined in the template.
+
+Even after this, you'll still see the old replica set (`k get rs`). This is used in case we need to rollback to the previous version quickly. It also stores a copy of all revisions since the first deployment. You can limit the number of stored revisions with the `revisionHistoryLimit` property on the deployment resource.
+
+Deploy a version with a bug (v3): 
+
+```bash
+k set image deployment kubia nodejs=luksa/kubia:v3
+```
+
+You can quickly rollback this to the previous version with:
+
+```bash
+k rollout undo deployment kubia
+# or to a specific version:
+k rollout undo deployment kubia --to-revision=N
+```
+
+You can view a rollout's history with the following:
+
+```bash
+k rollout history deployment kubia
+```
+**Note:** This is why we created the deployment with the `--record` flag.
+
+##### Rolling Update Strategy - maxSurge and maxUnavailable properties
+
+maxSurge is a number or percentage which means how many pods above the desired value can be created. Percentage is rounded up if not a round number. Default is 25%
+maxUnavailable is a number or percentage which mean many pod __below__ the desired value can be unavailable. Percentage is rounded down if not a round number. Default is 25%
+
+##### Pausing the rollout process
+
+You can achieve a canary deployment by pausing the deployment before it finishes.
+
+```bash
+k set image deployment kubia nodejs=luksa/kubia:v4
+k rollout pause deployment kubia
+```
+**Note:** Depending when you run the pause, only some requests will be going to the new pods, the rest will be going to the old ones.
+
+Resume with:
+
+```bash
+k rollout resume deployment kubia
+```
+
+This isn't a great way to achieve a canary release because it's relies upon timing of running the pause command. The proper way for now is to use 2 different deployments and scaling them appropriately. 
+
+##### Blocking rollouts of bad versions
+
+Use the `minReadySeconds` property to prevent malfunctioning versions from getting deployed.
+
+This specifies how long a newly created pod should be ready before it's treated as available. If the readiness probe fails before the minReadySeconds value has been met, K8s will stop the deployment.
+
+Test this out with a new deployment which includes a readiness check:
+
+```bash
+k apply -f ./kubia-deployment-v3-with-readinesscheck.yml
+```
+
+You can check the status again:
+
+```bash
+k rollout status deployment kubia
+```
+
+This says it's still waiting for rollout to finish...
+
+If we check the pods, we can see that one isn't ready. This is because the readiness probe happens every second. The 5th request (so the 5th second) will fail, meaning the readiness check will not pass. The pod is removed as an endpoint from the service. This happens before the 10 second minReadySeconds value that the deployment is waiting for, so the deployment is paused, waiting. If the rollout can't make any progress in 10 minutes, it's considered as failed. You can see this with:
+
+```bash
+k describe deployments kubia
+```
+
+Where it provides a reason of "ProgressDeadlineExceeded".
+
+You can manually abort the rollout with:
+
+```bash
+k rollout undo deployment kubia
+```
+
+
+
+

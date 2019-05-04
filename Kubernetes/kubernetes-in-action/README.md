@@ -791,6 +791,128 @@ You can manually abort the rollout with:
 k rollout undo deployment kubia
 ```
 
+### Chapter 10 - Statefulsets
+
+Pods keep the same hostname with an ordinal index from 0 (ie each pod with be named "podName-X"). They'll scale up and down in order so this is predictable. 
+
+To use persistent volumes, you need the stateful stes to use a Persistent Volume Claim template.
+
+To demonstrate this (with minikube), we'll create 3 PVs which we'll have our stateful set pods use. The image is similar to the kubia app except it'll accept a POST to add data to a text file and any GET request will display that data:
+
+```bash
+minikube ssh
+
+sudo mkdir -p /k8s/volumes/hostpath/statefulsetvol1
+sudo mkdir -p /k8s/volumes/hostpath/statefulsetvol2
+sudo mkdir -p /k8s/volumes/hostpath/statefulsetvol3
+
+k create -f ./stateful-set-pv.yml
+```
+
+We then need to create a governing service (also known as a headless service). This will be used to create a network identity for the pods. Using a "headless" service means all the IPs from the pods included in the selector are returned.
+
+Create the headless service and stateful set:
+
+```bash
+k create -f ./stateful-kubia.yml
+```
+**Note:** We create the PVC template with the `storageClassName` as blank. Otherwise, it would use the default storage class which would be to create a new PV for the PVC. In this example, we created the new volumes manually so we don't know new volumes to get created.
+
+This will create the pods, one by one. The reason for this is because certain clutered stateful apps are sensitive to race conditions if multiple cluster members are up at the same time.
+
+We'll use `k proxy` to connect to the API proxy:
+
+```bash
+k proxy
+curl http://localhost:8001/api/v1/namespaces/kube-system/pods/kubia-0/proxy/
+```
+**Note:** This connection went through 2 different proxies:
+1. kubectl proxy
+2. API server (which proxied the request to the pod)
+
+Which looks like this:
+
+![Double Proxied Connection](./imgs/double-proxied-connection.png)
+
+We'll test the POST functionality with:
+
+```bash
+curl -X POST -d "Hey there! This geeting was submitted to kubia-0." http://localhost:8001/api/v1/namespaces/kube-system/pods/kubia-0/proxy/
+```
+
+We can check the data exists on kubia-0 and not on kubia-1 by running the following:
+
+```bash
+curl http://localhost:8001/api/v1/namespaces/kube-system/pods/kubia-0/proxy/
+# We can see the data exists
+curl http://localhost:8001/api/v1/namespaces/kube-system/pods/kubia-1/proxy/
+# No data returned.
+```
+
+We can confirm the data persists even after we delete the kubia-0 pod:
+
+```bash
+k delete pod kubia-0
+curl http://localhost:8001/api/v1/namespaces/kube-system/pods/kubia-0/proxy/
+# We see the data exists still
+```
+
+We'll now test accessing this via a non-headless service but still via the API proxy:
+
+```bash
+# Still using the k proxy from before
+k create -f ./stateful-kubia-nonheadless-svc.yml
+curl http://localhost:8001/api/v1/namespaces/kube-system/services/kubia-public/proxy/
+# This will hit kubia-0 and kubia-1 alternately. 
+```
+**Note:** We're connecting directly to the service, instead of the pod this time.
+
+##### Discovery using DNS SRV records
+
+SRV records are used to point hostnames and ports to services. It can be used for peer discovery between (pod) cluster members.
+
+To run a one off DNS query for SRV records:
+
+```bash
+# This will return an answer section which points to each pod in the stateful set
+k run -it srvlookup --image=tutum/dnsutils --rm --restart=Never -- dig SRV kubia.kube-system.svc.cluster.local
+```
+
+For example, as the stateful set app currently stands, we get a response from one pod (either kubia-0 or kubia-1). One has data, the other does not. We're going to use a new version of the app which will do a SRV lookup and then perform a request on each pod it gets an answer for. Then this is returned in our GET request.
+
+Eg, imagine we have 3 pods in the stateful set.
+Our request to the public service hits kubia-0 first:
+
+![Stateful App Peers](./imgs/stateful-app-peers.png)
+
+We can update our stateful set to the use the new image:
+
+```bash
+k edit statefulset kubia
+# Update spec.template.spec.containers.image to luksa/kubia-pet-peers
+```
+**Note:** You have to delete the existing pods for the new image to get used. This is because stateful sets were more like ReplicaSets than Deployments. Since K8s v1.7, stateful sets support Rolling Updates (spec.updateStrategy)
+
+To test this, you need to run a couple of POSTs which end up on different pods and then a GET to the kubia-public service.
+This will only work if you are using the default namespace because the image is hardcoded with it in the SRV lookup.
+
+##### Stateful Set Pod recovery
+
+A stateful set guarantees that only 1 pod with the same identity is running at any time. Therefore if a node was to fail - it would have to KNOW that the pod had stopped working. 
+
+If a node fails, the master doesn't know for sure if the pod has stopped working. For example, the kubelet may have just stopped working, but the pod itself is fine. This means that the pod on that node would have a status of "unknown". The cluster admin would need to delete the pod or delete the whole node (thus evicting all pods). 
+
+If a pods status remains in a status of unknown for more than 2 minutes (this is configurable) then it's evicted from the node by the master. It evicts the pod by deleting the pod resource.
+
+##### Gotchas
+
+If you delete the pod manually, you may find the status is still "unknown" and the age of the pod hasn't changed. This is because the master (k8s control plane) has marked the pod for deletion but is waiting for confirmation from the downed node's kubelet that this has happened. Assuming the node won't come back up, this confirmation won't happen. The only way around this is to delete the pod forcibly:
+
+```bash
+k delete pod kubia-0 --force --grace-period 0
+```
+
+### Chapter 11 - Understanding Kubernetes Internals
 
 
 

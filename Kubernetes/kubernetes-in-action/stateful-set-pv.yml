@@ -1,0 +1,43 @@
+# This is using a list type instead of "---" as a delimiter of multiple resources
+kind: List
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: stateful-pv-a
+  spec:
+    capacity:
+      storage: 1Mi
+    accessModes:
+    - ReadWriteOnce
+    persistentVolumeReclaimPolicy: Recycle
+    hostPath:
+      path: /k8s/volumes/hostpath/statefulsetvol1
+      type: Directory
+- apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: stateful-pv-b
+  spec:
+    capacity:
+      storage: 1Mi
+    accessModes:
+    - ReadWriteOnce
+    persistentVolumeReclaimPolicy: Recycle
+    hostPath:
+      path: /k8s/volumes/hostpath/statefulsetvol2
+      type: Directory
+- apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: stateful-pv-c
+  spec:
+    capacity:
+      storage: 1Mi
+    accessModes:
+    - ReadWriteOnce
+    persistentVolumeReclaimPolicy: Recycle
+    hostPath:
+      path: /k8s/volumes/hostpath/statefulsetvol3
+      type: Directory

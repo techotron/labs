@@ -8,5 +8,5 @@ spec:
       storage: 1Gi
   accessModes:
     - ReadWriteOnce
-# Adding the storageClassName here with an empty string is crucial, otherwise the default StorageClass would be used to create the PV. In the case of minikube, this would be a hostPath volume.
+# Adding the storageClassName here with an empty string is crucial, otherwise the default StorageClass would be used to create the PV. In the case of minikube, this would be a new hostPath volume.
   storageClassName: ""

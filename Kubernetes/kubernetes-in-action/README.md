@@ -931,3 +931,8 @@ Check the status of the k8s components
 k get componentstatuses
 ```
 
+List all the k8s components running as pods:
+
+```bash
+k get pods -o custom-columns=POD:metadata.name,NODE:spec.nodeName --sort-by spec.nodeName -n kube-system
+```

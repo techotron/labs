@@ -914,5 +914,20 @@ k delete pod kubia-0 --force --grace-period 0
 
 ### Chapter 11 - Understanding Kubernetes Internals
 
+Only the API Server has direct access to the etcd storage. All the other components communicate to the API server.
 
+![K8s Internals](./imgs/k8s-internals.png)
+
+The control plane (master node) components can run as pods or run directly on the master nodes. To run as pods, the master nodes need a kubelet process running on them.
+Nearly all connections to the API server are initiated by the components except:
+
+- When you've used kubectl to get logs (API initiates to kubelet)
+- When using `kubectl attach` to connect to a container
+- When using `kubectl port-forward`
+
+Check the status of the k8s components
+
+```bash
+k get componentstatuses
+```
 

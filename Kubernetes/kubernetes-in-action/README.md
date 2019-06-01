@@ -936,3 +936,12 @@ List all the k8s components running as pods:
 ```bash
 k get pods -o custom-columns=POD:metadata.name,NODE:spec.nodeName --sort-by spec.nodeName -n kube-system
 ```
+
+#### etcd
+
+Key/Value store for K8s resource metadata. It stores the resource definitions in JSON. The etcd cluster is distributed and uses the RAFT consensus algorithm (which is the same as a quorum vote type cluster). Changes to the k/v go through the API server; making each change consistent. It uses optimistic locking which means when a client tries to update a value, a version number is checked. If the version number is different since the data was read, the update fails and the client has to re-read and re-process the change before it's able to write the update.
+
+Split brain example:
+![Split Brain Example](./imgs/split-brain-example.png)
+
+Most production deployments will have 5 master nodes for redundancy however, 3 is enough to survive a single node failure.

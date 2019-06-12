@@ -984,3 +984,40 @@ The network the pods use to communicate must be such that the IP address a pod s
 In other words, when pod A sends a network packet to pod B, the source IP pod B sees must be the same IP that pod A sees as its own. 
 
 There should not be any NAT'ing in between, even when this communication spans across worker nodes.
+
+The pod network looks like this:
+
+![Pod Network](./imgs/pod-network.png)
+
+Before the infrastructure container is started, the host creates a virtual interface pair. One interface of the pair remains on the hosts namespace (named something like `vethXXXX`) and the other is moved into the containers network namespace and renamed `eth0`.
+
+The interface on the host namespace is attached to a network bridge that the container runtime is configured to use. The interfaces of the adjoining containers are given an IP address in the bridge's IP range. Packets from Pod A to Pod B will go via the bridge.
+
+#### Cross Node Networking (the pods perspective)
+
+Consider the following:
+
+![Worker Node Network](./imgs/worker-node-network.png)
+
+For a Pod on Node A to connect to a pod on Node B, the following would need to happen:
+
+Pod on Node A -> Node A veth pair -> Node A Bridge ->  Node A physical adapter -> >Over the wire to Node B's physical adapter -> Node B Bridge -> Node B veth pair -> Pod on Node B
+
+This would only work if the nodes were connected to the same network switch without any routers involved. Otherwise, the packets would get dropped because they refer Pod IPs. The routers _could_ be configured to route packets for the pods to the node's interface but this isn't scalable and becomes increasingly hard the more routers there are.
+
+Using a SDN (Software Defined Network) resolves this problem. It makes it appear as though all the nodes are connected to the same network switch. Packets are encapsulated when they leave the pod, sent over the network and de-encapsulated and then delivered to the destination pod in their original form.
+
+#### Container Network Interface (CNI)
+
+CNI is a project which allows Kubernetes to use any CNI plugin that's out there, for example:
+
+- Calico
+- Flannel
+- Romana
+- Weave Net
+- (Others)
+
+Installing a network plugin isn't difficult. It's a case of deploying a Daemonset (plus some other supporting resources). This essentially deploys a network agent on the nodes, this then ties into the CNI interface on the nodes. In order for the nodes to _use_ this plugin, kubelet needs to be started with `--network-plugin=cni`.
+
+#### How Services are Implemented
+

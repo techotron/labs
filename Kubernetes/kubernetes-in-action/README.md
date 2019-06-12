@@ -1044,7 +1044,7 @@ HA for the CM and Scheduler isn't as easy. Only one set can be active at a time.
 
 Each of these components have a `--leader-elect` option which defaults to `true`. Each instance in the cluster is either active as the leader or just waiting to be the leader:
 
-![Control Plain Election](./img/control-plane-election.png)
+![Control Plane Election](./imgs/control-plane-election.png)
 
 The election process works by a resource getting created via the API server. The resource used for this is an Endpoints resource (which will soon, if not already be ConfigSets instead).
 

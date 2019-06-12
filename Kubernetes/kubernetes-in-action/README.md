@@ -945,3 +945,42 @@ Split brain example:
 ![Split Brain Example](./imgs/split-brain-example.png)
 
 Most production deployments will have 5 master nodes for redundancy however, 3 is enough to survive a single node failure.
+
+#### Service Proxy
+
+The kube-proxy is the thing responsible for routing packets destined for a service, to a pod. It does the load balancing (if the service is a load balancer). 
+
+There are 2 modes this is implemented:
+
+- `Userspace Proxy`: A server process which intercepted traffic destined for services and re-routed them to the correct pods. It uses iptables on the worker node to intercept the traffic.
+- `Iptables Proxy`: A process updates iptables rules to direct packets straight to the pods, without going through a proxy. This is the current (and much more performant) option in use.
+
+The Userspace proxy balanced traffic in a true round robin way whereas iptables  does it in a random way. 
+
+#### Cluster DNS
+
+The pods are configured to use the `kube-dns` service by default. The kube DNS pods which back this service look at the API server with the "watch" mechanism to check for updates to services/pods and updates it's DNS records accordingly. Any updates will be fairly prompt, but the changes are not instantaneous.
+
+#### How Ingress Works
+
+Most work in the same way - the controller runs a reverse proxy server and keeps it configured according to the Ingress, Service, and Endpoints resources. It therefore looks to the API server using the "watch" mechanism in order to keep up to date. 
+
+#### What a "Pod" Actually Is
+
+Even a single container pod consists of 2 containers under the hood. Each pod will have a container that is run first and "paused". This is the container that holds all the other containers in the pod together and it is how all the other containers are able to share the same network and Linux namespaces. It is also known as the pod infrastructure container.
+
+If application containers die, they need to be a part of the same namespace as before. The infrastructure container makes this possible.
+
+Its lifecycle is tied to the pod. If the pod is killed (intentionally or not) then the kubelet will re-create the infrastructure container and all the other containers which make up the pod.
+
+#### Inter Pod Networking
+
+K8s doesn't require a specific networking technology but it does mandate the following:
+
+```
+The network the pods use to communicate must be such that the IP address a pod sees as its own is the exact same address that all other pods see as the IP address of the pod in question.
+```
+
+In other words, when pod A sends a network packet to pod B, the source IP pod B sees must be the same IP that pod A sees as its own. 
+
+There should not be any NAT'ing in between, even when this communication spans across worker nodes.

@@ -1021,3 +1021,35 @@ Installing a network plugin isn't difficult. It's a case of deploying a Daemonse
 
 #### How Services are Implemented
 
+A service consists of a vIP and port pair. They're not assigned to an interface and are not pingable. 
+
+They work by kube-proxy agents "watching" the API server for new services and endpoints (endpoints are a list of pod IPs which are in scope for the service). When one is created, the kube-proxy makes the service addressable by setting up some iptables rules. This makes sure the packets are intercepted and destination address modified so that the packet is redirected to one of the pods backing the service.
+
+#### High Availability (Applications)
+
+Run apps as deployments. Even if the app isn't horizontally scalable, set the replica count to 1. That way, if the hosting node fails, the controller will bring the application up on another node. This will still incur downtime though, whilst the pod is started. This can be minimised by using a leader/election mechanism. This is accomplished by running multiple replicas but ensuring only 1 is active. The others would have logic (either built into the app or as a sidecar container) which would determine which replica is the "leader" and active. An example of this can be found here: https://github.com/kubernetes/contrib/tree/master/election
+
+#### High Availability (Control Plane)
+
+![Control Plane HA](./imgs/control-plane-ha.png)
+
+The following components would need to be available:
+
+- etcd (this is distributed by nature and is easy to setup)
+- API Server (almost completely stateless. All data is in etcd but some is cached. This needs to be put behind an LB so that all the kubelets talk to the healthy instances.)
+- Controller Manager 
+- Scheduler
+
+HA for the CM and Scheduler isn't as easy. Only one set can be active at a time. This is because they watch the API server and act when they see something relevant. They have no knowledge of each other and therefore you'd have instances of duplicate actions taking place.
+
+Each of these components have a `--leader-elect` option which defaults to `true`. Each instance in the cluster is either active as the leader or just waiting to be the leader:
+
+![Control Plain Election](./img/control-plane-election.png)
+
+The election process works by a resource getting created via the API server. The resource used for this is an Endpoints resource (which will soon, if not already be ConfigSets instead).
+
+The scheduler for example: `k get endpoints kube-scheduler -o yaml`
+
+There is an annotation called: `control-plane.alpha.kubernetes.io/leader`. The field called `holderIdentity` is the most important part. The first instance which puts its name there, becomes the leader. It uses optimistic concurrency (updates are versioned, if versions differ with what's on the API server, it's submitted again). The leader will try to update the value every 2 seconds (by default) so the other instances can see if it's not been updated in the expected time frame and will attempt to put their name there, started the cycle again.
+
+### Chapter 12 - Securing the API Server

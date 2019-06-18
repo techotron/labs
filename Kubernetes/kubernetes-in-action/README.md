@@ -1096,3 +1096,60 @@ The name of the service account needs to be added to the `spec.serviceAccountNam
 
 #### RBAC (Role Based Access Control)
 
+RBAC was introduced in version 1.8.0. Other authZ plugins are available:
+
+- Attribute Based Access Control
+- Web-Hook plugin
+- Custom plugin implementations
+
+RBAC uses a mapping of HTTP methods to authorisation verbs:
+
+|HTTP Method|Verb for single resource|Verb for collection|
+|---|---|---|
+|GET, HEAD|get, watch|list|
+|POST|create|n/a|
+|PUT|UPDATE|n/a|
+|PATCH|patch|n/a|
+|DELETE|delete|deletecollection|
+
+An authZ plugin like RBAC will run inside the API server and decide what verb a client is allowed to run based on the HTTP method used.
+It allows for fine grained permission allocation, from entire resource types to a single service and even to non-resource URL paths too.
+
+A human (user/s) or Service Account/s are associated with one or more roles. Each role will define what verbs are allowed to what resource. The sum of rules that a user's/SA's role membership allows will be the effective permissions. If an action/resource isn't specified, then the default action is to deny.
+
+#### RBAC Resources
+
+RBAC definitions are resources like everything else in k8s. 4 resource types can be grouped into 2 sets:
+
+- Roles and ClusterRoles (specify which verbs on which cluster resources)
+- RoleBindings and ClusterRoleBindings (which binds the above to users/groups/SAs)
+
+Roles define _what_ can be done. Bindings define _who_ can do it:
+
+![Roles and Bindings](./imgs/roles-bindings.png)
+
+The difference between the Role and Cluster elements of the above are that Roles are namespaced and Clustered are cluster-level resourced (not namespaced).
+
+![Scope of Roles](./imgs/scope-of-roles.png)
+
+#### RBAC Example
+
+- We'll deploy 2 pods in different namespaces to compare the roles.
+- The pods will run a single container and use kubectl exec to run curl to the API server.
+- The container is based on the kubectl-proxy image (see Chapter 8 notes) which proxies the kubectl connection to localhost:8001, whilst authenticating as the default SA
+
+1. Create namespaces and pods
+
+```bash
+k create ns foo 
+k run test --image=luksa/kubectl-proxy -n foo
+k create ns bar 
+k run test --image=luksa/kubectl-proxy -n bar
+```
+
+2. Run a shell within the pod
+
+```bash
+k exec -it <pod-name> -n foo /bin/sh
+k exec -it <pod-name> -n bar /bin/sh
+```

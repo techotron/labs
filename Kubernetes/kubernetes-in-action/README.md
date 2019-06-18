@@ -1053,3 +1053,46 @@ The scheduler for example: `k get endpoints kube-scheduler -o yaml`
 There is an annotation called: `control-plane.alpha.kubernetes.io/leader`. The field called `holderIdentity` is the most important part. The first instance which puts its name there, becomes the leader. It uses optimistic concurrency (updates are versioned, if versions differ with what's on the API server, it's submitted again). The leader will try to update the value every 2 seconds (by default) so the other instances can see if it's not been updated in the expected time frame and will attempt to put their name there, started the cycle again.
 
 ### Chapter 12 - Securing the API Server
+
+K8s uses a authN and authZ plugins to first let a client log in (authN) and then decide what that client is permitted to do (authZ). There are several authN plugins available and they typically use the following methods to obtain the client's identity:
+
+- From the client certificate
+- From an auth token in the HTTP header
+- Basic HTTP auth
+
+A Service Account is a resource which represents the identity of the app running inside the pod. Each pod has an associated service account (or will use the default SA in the namespace where the pod exists, which is called 'default').
+
+The format for a service account is: `system:serviceaccount:<namespace>:<service account name>`
+
+Service Accounts can only be used by pods in the same namespace. You can control what resources/actions a pod can perform by assigning it to different service accounts. The authentication tokens used in Service Accounts are JWT tokens (JSON Web Tokens).
+
+#### Creating Service Accounts
+
+This will create a service account with the name `myServiceAccountName` in whatever namespace kubectl is currently configured to use.
+
+```bash
+k create serviceaccount foo
+```
+
+You can list service accounts like any other k8s resource `k get serviceaccounts`, and also describe them with `k describe serviceaccount foo`.
+
+Reading a secret from a service account is the same as any secret, `k describe secret foo-token-nptwh`
+
+In a `k describe` command, Service Account tokens are included in the "Mountable secrets" list. By default, a pod can mount any secret it wants but the pod's service account can be configured to only allow the pod to mount secrets which are listed as mountable secrets on the service account.
+
+To enable this feature, you need to add the following annotation to the service account:
+
+`kubernetes.io/enforce-mountable-secrets="true"`
+
+Any pods using a service account with this annotation will only be allowed to mount secrets in the "Mountable secrets" list.
+
+You can add an `imagePullSecret` to a Service Account definition (eg `./service-account.yml`). Added this to a service account will mean any pods that use the service account will inherit the image pull secret (meaning you don't have to add it to each pod).
+
+#### Assigning a service account to a pod
+
+You can only do this at pod creation time, you can't set later. 
+
+The name of the service account needs to be added to the `spec.serviceAccountName` field in the pod definition. 
+
+#### RBAC (Role Based Access Control)
+

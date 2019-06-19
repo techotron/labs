@@ -1352,9 +1352,36 @@ k get clusterrolebindings
 k get clusterroles
 ```
 
-The important ones are:
+The important ClusterRoles are:
 
 - view
 - edit
 - admin
 - cluster-admin
+
+These are meant to be bound to ServiceAccounts
+
+##### View Role
+
+Allows read only to most resources except for; Roles, RoleBindings and Secrets. Not secrets because this may allow viewing credentials which might allow higher privileges (privilege escalation).
+
+##### Edit Role
+
+Allows modifying resources in a namespace. It also allows reading and modifying secrets. It doesn't allow modifying Roles or RoleBindings (again, to prevent privilege escalation).
+
+##### Admin Role
+
+Allows full control of resources in a namespace. They can read and modify any resource except ResourceQuotas and the namespace resource itself. Difference between `edit` and `admin` is the ability to edit Roles and RoleBindings.
+
+##### Cluster-Admin Role
+
+Allows full and complete control of the k8s cluster and all the resources within it. It has the same permissions as the `admin` role with the addition that it can also edit ResourceQuotas and Namespace resources.
+
+If you create a RoleBinding which references the `cluster-admin` role, then you'll be giving the subject full access to the entire namespace that the RoleBinding exists in.
+
+#### Best Practices
+
+- Principal of least privilege.
+- Create Service Accounts for each pod/relicas and associate with tailor made Role/ClusterRole with a RoleBinding (it's unlikely you'd want to grant that pod access to other namespaces so a ClusterRoleBinding is not what you'd want).
+- Expect your application will get compromised. Minimise the damage that an attacker _could_ do if they had access to your pods.
+ 

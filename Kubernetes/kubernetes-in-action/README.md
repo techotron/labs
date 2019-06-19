@@ -1221,7 +1221,140 @@ Now log onto the pod in `bar` and check for services in the `foo` namespace - it
 
 #### RBAC ClusterRoles/ClusterRoleBindings
 
+These resources are _not_ namespaced and are "cluster-level" resources. Certain resources aren't namespaced, such as:
+
+- Nodes
+- Persistent Volumes
+- Namespaces
+etc.
+
+Roles (which operate at the namespace level) can't grant access to these resources but ClusterRoles can.
+
+This will create a ClusterRole which will grant list rights to persistent volumes:
+
+```bash
+k create clusterrole pv-reader --verb=get,list --resource=persistentvolumes
+```
+
+**Note:** This can also be defined in the ./rbac-cluster-role-pv-reader.yml definition
+
+Before binding the role to a service account, confirm that the pod in `foo` can't list persistent volumes:
+
+```bash
+curl localhost:8001/api/v1/persistentvolumes
+```
+
+Then apply the binding by creating a ClusterRoleBinding resource:
+
+```bash
+k create clusterrolebinding pv-test --clusterrole=pv-reader --serviceaccount=foo:default
+```
+
+Now if you run the test again, it should work:
+
+```bash
+curl localhost:8001/api/v1/persistentvolumes
+```
+
+#### Non-Resource URLs
+
+These are URLs which don't map to a "resource" as such but to some sort of service (eg /healthz or /dashboard etc).
+
+The `system:discovery` ClusterRole allows this automatically.
+
+```bash
+k get clusterrole system:discovery -o yaml
+```
+
+The "system:discovery" ClusterRole has an associated binding called the same:
+
+```bash
+k get clusterrolebinding system:discovery -o yaml
+```
+
+It works by binding the `system:authenticated` and `system:unauthenticated` groups to the ClusterRole.
+
+It's possible to pair ClusterRoles with RoleBindings in order to grant access to namespaced resources in a specific namespace.
+
+The built-in `view` ClusterRole:
+
+```bash
+k get clusterrole view -o yaml
+```
+
+You can bind this role with a RoleBinding or a ClusterRoleBinding. The difference being that in a RoleBinding, only access to the resources that belong to the namespace that the RoleBinding relates to are allowed. If a ClusterRoleBinding was used, then it would be resources across all namespaces in the cluster.
+
+#### Testing a ClusterRole with a RoleBinding and ClusterRoleBinding
+
+1. Control test (before changes)
+
+From the pod in the `foo` namespace:
+
+```bash
+# The below shouldn't work because we're asking for pods in all namespaces
+curl localhost:8001/api/v1/pods
+# The below shouldn't work because we don't have permission to view the pod resource in the foo namespace
+curl localhost:8001/api/v1/namespaces/foo/pods
+```
+
+2. Create ClusterRoleBinding to the "view" ClusterRole
+
+We expect this to allow us to view pods in all namespaces and in specific namespaces also
+
+```bash
+k create clusterrolebinding view-test --clusterrole=view --serviceaccount=foo:default
+```
+
+3. Test new binding has worked
+
+```bash
+# All of these should work
+curl localhost:8001/api/v1/pods
+curl localhost:8001/api/v1/namespaces/foo/pods
+curl localhost:8001/api/v1/namespaces/bar/pods
+```
+
+4. Test with RoleBinding in foo namespace
+
+We need to delete the ClusterRoleBinding we've just created and test a RoleBinding
+
+```bash
+k delete clusterrolebinding view-test
+k create rolebinding view-test --clusterrole=view --serviceaccount=foo:default --namespace foo
+```
+
+5. Test RoleBinding access
+
+We'd expect to only be able to view pods in the `foo` namespace:
+
+```bash
+# The below should FAIL
+curl localhost:8001/api/v1/pods
+# The below should SUCCEED
+curl localhost:8001/api/v1/namespaces/foo/pods
+# The below should FAIL
+curl localhost:8001/api/v1/namespaces/bar/pods
+```
 
 
+#### When to use Namespaces/Cluster wide roles and bindings
 
+![Roles Bindings Use Cases Table](./imgs/roles-bindings-use-cases-table.png)
 
+#### Default ClusterRoles and ClusterRoleBindings
+
+These are pre configured cluster level roles and bindings. They are updated everytime the API server starts which means that they'll get re-created if you mistakenly delete them or if a newer version of Kubernetes uses a different configuration of cluster roles and bindings.
+
+To view the list of default ClusterRoles and ClusterRoleBindings:
+
+```bash
+k get clusterrolebindings
+k get clusterroles
+```
+
+The important ones are:
+
+- view
+- edit
+- admin
+- cluster-admin

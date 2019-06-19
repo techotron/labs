@@ -1132,7 +1132,7 @@ The difference between the Role and Cluster elements of the above are that Roles
 
 ![Scope of Roles](./imgs/scope-of-roles.png)
 
-#### RBAC Example
+#### RBAC Roles/RoleBindings Example (Setup)
 
 - We'll deploy 2 pods in different namespaces to compare the roles.
 - The pods will run a single container and use kubectl exec to run curl to the API server.
@@ -1141,9 +1141,9 @@ The difference between the Role and Cluster elements of the above are that Roles
 1. Create namespaces and pods
 
 ```bash
-k create ns foo 
+k create namespace foo 
 k run test --image=luksa/kubectl-proxy -n foo
-k create ns bar 
+k create namespace bar 
 k run test --image=luksa/kubectl-proxy -n bar
 ```
 
@@ -1153,3 +1153,75 @@ k run test --image=luksa/kubectl-proxy -n bar
 k exec -it <pod-name> -n foo /bin/sh
 k exec -it <pod-name> -n bar /bin/sh
 ```
+
+3. Check that RBAC is enabled by confirming the following gets denied (within the pod session):
+
+```bash
+curl localhost:8001/api/v1/namespaces/foo/services
+```
+
+A response which goes along the lines of "forbidden" should be received.
+
+#### RBAC Roles/RoleBindings Example (Testing)
+
+1. Deploy the RBAC policy to the `foo` namespace
+ 
+This allows read access to services in the namespace:
+
+```bash
+k create -f ./rbac-service-reader.yml
+```
+
+**Note:** This policy will allow "get" and "list" actions to resources specified in the `apiGroups` field. In this case, services are part of the core apiGroup, so just an empty `""` is needed. If access to resources belonging to multiple resource groups are required, then multiple policies are required.
+
+2. Deploy the RBAC policy to the `bar` namespace
+
+An alternative way to create the same policy would be to use `kubectl`, in the bar namespace for example:
+
+```bash
+k create role service-reader --verb=get --verb=list --resource=services --namespace bar
+```
+
+3. Bind the Roles to the Service Accounts
+
+Create the RoleBinding resource to pair the Role with the Service Account (which in this case is the default SA for the foo namespace):
+
+```bash
+k create rolebinding test --role=service-reader --serviceaccount=foo:default --namespace foo
+```
+
+The yaml representation of this is found in ./rbac-service-reader-binding.yml
+
+**Note:** If you want to bind to a user or group resource, then the same command would be used but replacing `--serviceaccount` with `--user` or `--group`.
+
+4. Re-test API access
+
+Now that the default service account has been paired with the service-reader role, we can confirm the access with another test:
+
+(From with the shell session to the test pod in the foo namespace)
+
+```bash
+curl localhost:8001/api/v1/namespaces/foo/services
+```
+
+**Note:** The response will be successful but the list of "items" in the response will be empty because no services exist in this namespace.
+
+5. Add the test pod from `bar` namespace to access service resources in `foo`
+
+```bash
+k edit rolebinding test -n foo
+# Add the following lines to the subjects list:
+
+- kind: ServiceAccount
+  name: default
+  namespace: bar
+```
+
+Now log onto the pod in `bar` and check for services in the `foo` namespace - it should back back positive.
+
+#### RBAC ClusterRoles/ClusterRoleBindings
+
+
+
+
+

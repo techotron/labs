@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+# If the namespace wasn't specified here, the current namespace would be used
+  namespace: foo
+  name: service-reader
+rules:
+# Services are resources in the core apiGroup which has no name, hence the "".
+  - apiGroups: [""]
+    verbs: ["get", "list"]
+# NOTE: Plural rules must be used here!
+    resources: ["services"]

@@ -1387,4 +1387,45 @@ If you create a RoleBinding which references the `cluster-admin` role, then you'
 
 ### Chapter 13 - Securing Cluster nodes and the Network
 
- 
+You can configure a pod to share the node's network namespace by setting the `spec.hostNetwork` property to `true`:
+
+![hostNetwork true](./imgs/host-network-true.png)
+
+When the control plane components are deployed as pods, they will typically have the `hostNetwork` property set to `true`.
+
+#### Hostport vs NodePort
+
+You can also bind a port from a host's default namespace to a pod's own network namespace by setting the `spec.containers.port` property to `hostPort`. This differs to a Node port service like so:
+
+![nodeport vs hostport](./imgs/nodeport-vs-hostport.png)
+
+Node Port: an incoming connection could hit the service on node 1 but get routed to a pod on node 2
+Host Port: there is a direct binding to the node's port to the pod's port. This means only 1 pod with a hostport binding on any single port can run on a single node.
+
+The scheduler is aware of the caveat to hostPorts, so if 4 replicas are deployed in a 3 node cluster, it'll deploy 3 (1 on each node) and a 4th will be in a "pending" state.
+
+Deploy a pod with a hostport:
+
+```bash
+k create -f ./kubia-hostport.yml
+```
+
+The hostport service is primarily used for exposing system services which are deployed to every node using DaemonSets.
+
+This used to also be a method people used to ensuring no 2 pods were scheduled to the same node (but there is a better way of achieving this now).
+
+#### Shared PID and IPC namespace
+
+You can share the node's PID and IPC namespace using the `hostPID` and `hostIPC` properties:
+
+```bash
+k create -f ./pod-with-host-pid-and-ipc.yml
+```
+
+Check the running processes that the pod can see. Usually, this would only show the processes in the pod's own namespace but this shows all the ones on the node's as well:
+
+```bash
+kubectl exec pod-with-host-pid-and-ipc ps aux
+```
+
+By setting the `hostIPC` to true, the container can communicate to all the host's processes.

@@ -1,12 +1,12 @@
 ## Notes for going through the Kubernetes in Action
 Github link: https://github.com/luksa/kubernetes-in-action
-### Chapter 4
+## Chapter 4
 ##### Create replication controller
 ```bash
 k create -f ./kubia-rc.yml
 ```
 
-### Chapter 5 - Services and Ingress
+## Chapter 5 - Services and Ingress
 #### Services
 ##### Create service
 ```bash
@@ -95,7 +95,7 @@ k run dnsutils --image=tutum/dnsutils --generator=run-pod/v1 --command -- sleep 
 ```
 Note: the `--generator=run-pod/v1` part tells K8s to create a pod without a replication controller or similar behind it.
 
-### Chapter 6 - Storage
+## Chapter 6 - Storage
 
 #### - Non-Persistent Storage -
 #### Creating shared volumes with "emptyDir" type
@@ -225,7 +225,7 @@ The below image illistrates how storage classes work:
 
 ![Storage Classes](./imgs/storage-classes.png)
 
-### Chapter 7 - Secrets and ConfigMaps
+## Chapter 7 - Secrets and ConfigMaps
 #### Config Maps
 
 ##### CMD, Entrypoint Terminology
@@ -486,7 +486,7 @@ This will create a secret with a single entry called `.dockercfg` which is the e
 
 Add this to the spec in the pod manifest. Commented example is in ./fortune-pod-env-configmap-secret.yml
 
-### Chapter 8 - Pod Metadata
+## Chapter 8 - Pod Metadata
 #### Downward API
 ##### Downward API using Env Vars
 The Downward API enables you to expose the pod's own metadata to the processes running inside the pod. It allows you to pass the following information:
@@ -641,7 +641,7 @@ Multiple user-contributed client libraries:
 
 Kubernetes has a list of swagger API definitions but also has Swagger UI integrated into the API server. You can enable it with the `--enable-swagger-ui=true` or with minikube, when you start the cluster: `minikube start --extra-config=apiserver.Features.Enable-SwaggerUI=true`. You can then get to it using the /swagger-ui URI.
 
-### Chapter 9 - Deployments
+## Chapter 9 - Deployments
 
 Create new kubia replication controller, service and ingress, running v1:
 
@@ -791,7 +791,7 @@ You can manually abort the rollout with:
 k rollout undo deployment kubia
 ```
 
-### Chapter 10 - Statefulsets
+## Chapter 10 - Statefulsets
 
 Pods keep the same hostname with an ordinal index from 0 (ie each pod with be named "podName-X"). They'll scale up and down in order so this is predictable. 
 
@@ -912,7 +912,7 @@ If you delete the pod manually, you may find the status is still "unknown" and t
 k delete pod kubia-0 --force --grace-period 0
 ```
 
-### Chapter 11 - Understanding Kubernetes Internals
+## Chapter 11 - Understanding Kubernetes Internals
 
 Only the API Server has direct access to the etcd storage. All the other components communicate to the API server.
 
@@ -1052,7 +1052,7 @@ The scheduler for example: `k get endpoints kube-scheduler -o yaml`
 
 There is an annotation called: `control-plane.alpha.kubernetes.io/leader`. The field called `holderIdentity` is the most important part. The first instance which puts its name there, becomes the leader. It uses optimistic concurrency (updates are versioned, if versions differ with what's on the API server, it's submitted again). The leader will try to update the value every 2 seconds (by default) so the other instances can see if it's not been updated in the expected time frame and will attempt to put their name there, started the cycle again.
 
-### Chapter 12 - Securing the API Server
+## Chapter 12 - Securing the API Server
 
 K8s uses a authN and authZ plugins to first let a client log in (authN) and then decide what that client is permitted to do (authZ). There are several authN plugins available and they typically use the following methods to obtain the client's identity:
 
@@ -1385,7 +1385,7 @@ If you create a RoleBinding which references the `cluster-admin` role, then you'
 - Create Service Accounts for each pod/relicas and associate with tailor made Role/ClusterRole with a RoleBinding (it's unlikely you'd want to grant that pod access to other namespaces so a ClusterRoleBinding is not what you'd want).
 - Expect your application will get compromised. Minimise the damage that an attacker _could_ do if they had access to your pods.
 
-### Chapter 13 - Securing Cluster nodes and the Network
+## Chapter 13 - Securing Cluster nodes and the Network
 
 You can configure a pod to share the node's network namespace by setting the `spec.hostNetwork` property to `true`:
 
@@ -1637,3 +1637,13 @@ If there are default capabilities which are specified in policy, then all contai
 #### Defining Allowed Volume Types
 
 See the example policy [psp-volumes.yml](./psp-volumes.yml)
+
+**Note:** If multiple policies are in place, then a union of the allowed volume types is used (ie, accumlative)
+
+#### Assigning Policies to users and groups
+
+You can do this using RBAC. Bind a policies to a ClusterRole via a ClusterRoleBinding.
+
+### Isolating the Pod Network
+
+

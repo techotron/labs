@@ -1606,6 +1606,34 @@ ls -l /volume
 
 ### Restricting the use of the above features
 
-This section will outline how to prevent users of the cluster from granting the pods they deploy, more privileges than they reqire.
+This section will outline how to prevent users of the cluster from granting the pods they deploy, more privileges than they require. This is done using a "PodSecurityPolicy", which is a cluster-level resource. They define what security related features users can and can't use in their pods.
 
+When a user submits a pod config to the API server, the pod security policy plugin will confirm if the user is allowed to use whatever security features are specified. If they're not, then it's rejected immediately. If it's allowed, it's stored to etcd.
 
+A PodSecurityPolicy defines things like the following:
+
+- Whether a pod can use the host’s IPC, PID, or Network namespaces 
+- Which host ports a pod can bind to 
+- What user IDs a container can run as 
+- Whether a pod with privileged containers can be created 
+- Which kernel capabilities are allowed, which are added by default and which are always dropped 
+- What SELinux labels a container can use
+- Whether a container can use a writable root filesystem or not 
+- Which filesystem groups the container can run as 
+- Which volume types a pod can use
+
+An example policy [pod-security-policy.yml](./pod-security-policy.yml)
+
+#### Overriding Container User IDs
+
+If you specify a user ID that a container should run as in the Dockerfile and have a PodSecurityPolicy which specifies a runAsUser min/max of 2 - then this will override the user ID used in the Dockerfile. Therefore you can can't bypass the policy by using the USER directive in the Dockerfile.
+
+#### Defining Capabilities (allowed, dropped and default)
+
+See the example policy [psp-capabilities..yml](./psp-capabilities.yml)
+
+If there are default capabilities which are specified in policy, then all containers will inherit them. If you don't want your container to have them, you can explicitly drop them in the pod spec file. This (drop) will override the defaults set by the policy.
+
+#### Defining Allowed Volume Types
+
+See the example policy [psp-volumes.yml](./psp-volumes.yml)

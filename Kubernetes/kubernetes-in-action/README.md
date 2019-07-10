@@ -1429,3 +1429,183 @@ kubectl exec pod-with-host-pid-and-ipc ps aux
 ```
 
 By setting the `hostIPC` to true, the container can communicate to all the host's processes.
+
+#### Security Context
+
+Using the `security-context` property in a pod manifest, you can add more security properties for the pod to access.
+
+- Specify the user ID under which the container will run
+- Prevent the container running as root (this would prevent any container configured to run as root, to start).
+- Run the container in privileged mode, giving it full access to the node's kernal.
+- Configure fine grained privileges.
+- Set SELinux
+- Prevent the process from writing to the container's filesystem.
+
+To test this, we will run a pod with default security-context:
+
+```bash
+k run pod-with-defaults --image alpine -- /bin/sleep 999999
+```
+
+We'll check what user ID information it's running as:
+
+```bash
+k exec pod-with-defaults-7597b869cb-qztct -- id
+
+# returns:
+uid=0(root) gid=0(root) groups=0(root),1(bin),2(daemon),3(sys),4(adm),6(disk),10(wheel),11(floppy),20(dialout),26(tape),27(video)
+```
+
+This tells us it's running as root (uid=0) and group id as root (gid=0)
+
+**Note:** If the USER directive is omitted from a Dockerfile, then the container will run as root by default.
+
+Now, we'll run a pod to run as a specific user:
+
+```bash
+k create -f ./pod-as-user-guest.yml
+```
+
+Check the user ID for the new pod:
+
+```bash
+k exec pod-as-user-guest -- id
+
+# returns:
+uid=405(guest) gid=100(users)
+```
+
+To prevent a container to run as root, the securityContext property is: `runAsNonRoot: true`. If you tried to run the pod (which uses a root user) it would get scheduled but not run.
+
+Some containers will need to modify the node system which will require the `privileged: true` property. For example the kube-proxy pods need to keep the node's iptables config updated with new services etc.
+
+A pod with `privileged: true` will have access to /dev, lets look at the differences:
+
+```bash
+k create -f ./pod-privileged.yml
+
+k exec pod-with-defaults-7597b869cb-qztct --  ls /dev
+
+# expected return:
+core
+fd
+full
+mqueue
+null
+ptmx
+pts
+random
+shm
+stderr
+stdin
+stdout
+termination-log
+tty
+urandom
+zero
+
+
+k exec pod-privileged -- ls /dev
+
+# expected return
+autofs
+bsg
+btrfs-control
+core
+cpu
+... <loads more>
+```
+
+This means that the container can use any device freely. Therefore - use with caution!
+
+Another example use case for this level of privilege is if you want a pod running on a Raspberry Pi to control a connected LED.
+
+#### Permitting fine grained kernal capabilities
+
+Linux allows you to permit "capabilities" to containers rather than a blanket "everything", as with the case of privileged containers. For example, if you wanted to allow a container to change the hardware clock, you could add the following to the pod template:
+
+```yaml
+securityContext:
+  capabilities:
+    add:
+    - SYS_TIME
+```
+
+**Note:** Linux capabilities are usually prefixed with "CAP_" but you leave this bit out in the pod template.
+
+#### Dropping kernal capabilities
+
+By default, containers are granted the CAP_CHOWN capability which allows them to change the ownership of files on the filesystem. This can be dropped like so:
+
+```yaml
+securityContext:
+  capabilities:
+    drop:
+    - CHOWN
+```
+
+#### Preventing processes from writing to the containers filesystem
+
+It's wise to prevent processes from writing to the container filesystem outside of the mounted volumes. This can be done with the following:
+
+```yaml
+securityContext:
+  readOnlyRootFilesystem: true
+```
+
+**Note:** Doing this means that you'd need to mount a volume to wherever the pod needs to write to (eg, on-disk caches, logs etc).
+
+#### Sharing volumes between different user IDs
+
+Use case: 2 third party containers need to access the same volume. They need to read/write to it but the user their processes run as differ. It's possible to specify a supplemental group which grants this access, allowing the user ID to access the volume without causing a clash. This is done using the following properties:
+
+- fsGroup
+- supplementalGroups
+
+Create the following pod which consists of 2 containers which share an empty volume.
+
+```bash
+k create -f ./pod-with-shared-volume-fsgroup.yml
+```
+
+The template shows us a couple of things:
+
+- The `first` container runs as user ID 1111
+- The `second` container runs as user ID 2222
+- The fsGroup and supplemental runs as the _pod_ level. They add users to groups 555, 666 and 777
+
+`fsGroup: 555` will set the mounted volumes to be owned by group ID 555 
+
+```bash
+# Open a shell to the first container
+kubectl exec -it pod-with-shared-volume-fsgroup -c first sh
+
+# Show group membership
+id
+
+# expected return:
+uid=1111 gid=0(root) groups=555,666,777
+
+# Show permissions to the mounted volume
+ls -l / | grep volume
+
+# expected return:
+drwxrwsrwx    2 root     555           4096 Jul 10 13:25 volume
+
+# Create a file on the mounted volume
+echo foo > /volume/foo
+
+# Check the owner
+ls -l /volume
+
+# expected return:
+-rw-r--r--    1 1111     555              4 Jul 10 13:27 foo
+```
+
+**Note:** This differs to when you usually create files on a filesystem. The owner of the file isn't the creator, instead is the group ID for the fsGroup.
+
+### Restricting the use of the above features
+
+This section will outline how to prevent users of the cluster from granting the pods they deploy, more privileges than they reqire.
+
+

@@ -1646,4 +1646,72 @@ You can do this using RBAC. Bind a policies to a ClusterRole via a ClusterRoleBi
 
 ### Isolating the Pod Network
 
+It's possible to configure which pods, other pods can talk to by using a `NetworkPolicy`. The ability to use a NetworkPolicy resource is dependent on which container networking plugin is used.
+
+Application of the policy is determined by a label selector mechanism. The NetworkPolicy uses ingress and egress rules (not related to Ingress resources) to allow|deny access to other pods.
+
+#### Enabling network isolation
+
+By default, pods in a given namespace can be accessed by anyone. To change this, we'll need to create a `default-deny` policy resource. This policy will prevent any pod from accessing any other pod in the same namespace.
+
+```bash
+k create -f ./network-policy-default-deny.yml
+``` 
+
+*Note:* The empty pod selector means it applies to all pods in the namespace.
+
+#### Adding an ingress rule
+
+This example will allow a web server pod to talk to a Postgress pod on the Postgress port (by default, 5432):
+
+```bash
+k create -f ./network-policy-postgres.yml
+```
+
+*Note:* The selector is the database pod, so it'll only apply to the DB pod. The rule is saying "allow ingress from pods with the `webserver` app label on port 5432". 
+*Note2:* The web server pods would typically talk to the database pods via a service rather than directly. This doesn't change how the ingress|egress rules work. An ingress rule is still required even if the pod is connecting via a service. 
+
+This on it's own will allow the web server pods to talk to the database pods. There's no need to create an egress rule for the webserver pods.
+
+#### Allowing pods from a specific namespace
+
+Allow all pods from a namespace (with a label of `tenant: manning`) to access a pod
+
+```bash
+k create -f ./network-policy-cart.yml
+```
+
+This will allow any pod from the namespace which has a label of `tenant: manning` to access the pods with an app label of "shopping-cart", on port 80.
+
+*Note:* If the tenant had access to change the labels of their own namespace, it would be possible for them to circumvent this NetworkPolicy rule.
+
+#### Allowing pods from a CIDR network address
+
+An example of this is in [network-policy-cidr.yml](./network-policy-cidr.yml). It works the same way as the other policies but using the CIDR notation in the ipBlock section.
+
+#### Egress rules
+
+These work the same way as ingress but define rules for outgoing traffic instead.
+
+This example will restrict the web pods to only allow outbound to the database pods. It dooesn't define ingress for the database pods, ie: if the database pods didn't have an ingress rule allow access from the webserver pods - then they'd not be able to access them.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-net-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: webserver
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: database
+    ports:
+    - port: 5432
+```
+
+## Chapter 14 - Managing Pod Computational Resources
 

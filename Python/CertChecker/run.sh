@@ -1,0 +1,1 @@
+docker run --name cert-checker cert-checker

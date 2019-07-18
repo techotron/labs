@@ -1,1 +1,1 @@
-docker run --name cert-checker cert-checker
+docker run --name MYAPP MYAPP

@@ -1,1 +1,1 @@
-docker build -t cert-checker:latest .
+docker build -t MYAPP:latest .

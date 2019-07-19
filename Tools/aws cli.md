@@ -18,3 +18,12 @@ Command to get the ReturnCertExpiry using the equals operator:
                 --stack-name sam-python \
                 --query 'Stacks[].Outputs[?OutputKey == `ReturnCertExpiry`].OutputValue[]'
 ```
+
+Command to return a service name ARN using the contains operator:
+
+```bash
+aws ecs list-services \
+    --cluster my-ecs-cluster-name \
+    --query 'serviceArns[?contains(@, `my-service-name`) == `true`]' \
+    --output text
+```

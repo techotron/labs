@@ -27,3 +27,12 @@ aws ecs list-services \
     --query 'serviceArns[?contains(@, `my-service-name`) == `true`]' \
     --output text
 ```
+
+Command to return a specific element in the json response (example using subscription filter):
+
+```bash
+aws logs describe-subscription-filters \
+    --log-group-name /my-log-group/log-group-name \
+    --query 'subscriptionFilters[].filterName' \
+    --output text
+```

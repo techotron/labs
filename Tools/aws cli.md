@@ -36,3 +36,11 @@ aws logs describe-subscription-filters \
     --query 'subscriptionFilters[].filterName' \
     --output text
 ```
+
+Return change sets where `ChangeSetName` contains the string `PR-123`:
+
+```bash
+aws cloudformation list-change-sets \
+    --stack-name my-stack-name \
+    --query 'Summaries[?contains(ChangeSetName, `PR-123`) == `true`].ChangeSetName'
+```

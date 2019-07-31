@@ -1826,11 +1826,29 @@ These were called Opaque Integer Resources but this was changed in 1.8 to Extend
 
 - Add your resource name to the node object's `capacity` field (eg `example.org/my-gpu-resource`) *Can't be in the kubernetes.io namespace
 - The above can be done with a `PATCH` HTTP request
-- The quanity must be an integer (eg, it couldn't be 100m because this == 0.1 but it could be 2000m or 2)
+- The quantity must be an integer (eg, it couldn't be 100m because this == 0.1 but it could be 2000m or 2)
 - This value will be copied from the capacity field, to the allocatable field automatically.
 - You specify the request in the same way as any other in the pod spec file.
 
 An example of where you might do this is with GPU units.
 
 ### Limiting Resources available to a container
+
+CPU is a compressible resource. You can throttle it without it causing too many issues for the application.
+Memory is not. If a process has been given a chunk of memory, it can't be taken away without the process releasing it (or killing the process).
+
+Therefore, you need to limit the maximum amount of memory an application can use.
+
+The following pod (./limited-pod.yml) will only allow the container/s within it to use up to 200m (CPU) AND 20Mi:
+
+```bash
+k create -f ./limited-pod.yml
+```
+
+**Note:** Because the pod definition doesn't contain any resource requests, the same values for the limits will be used.
+
+Unlike resource requests, you are allowed to over provision the limits for a node. This does mean however, if a node's resources are exhausted, pods will need to be killed off.
+
+### Exceeding the limits
+
 

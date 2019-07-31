@@ -1839,7 +1839,7 @@ Memory is not. If a process has been given a chunk of memory, it can't be taken 
 
 Therefore, you need to limit the maximum amount of memory an application can use.
 
-The following pod (./limited-pod.yml) will only allow the container/s within it to use up to 200m (CPU) AND 20Mi:
+The following pod (./limited-pod.yml) will only allow the container/s within it to use up to 1 (CPU) AND 20Mi:
 
 ```bash
 k create -f ./limited-pod.yml

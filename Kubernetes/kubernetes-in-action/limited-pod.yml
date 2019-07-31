@@ -9,5 +9,5 @@ spec:
     name: main
     resources:
       limits:
-        cpu: 800m
+        cpu: 1
         memory: 20Mi

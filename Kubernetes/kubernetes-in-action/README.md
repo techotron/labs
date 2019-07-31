@@ -1788,4 +1788,49 @@ The kubelet reports the resource metrics for a node to the API server. The Sched
 
 ```bash
 kubectl describe nodes
+
+# Example output:
+...
+Capacity:
+ cpu:                2
+ ephemeral-storage:  17784772Ki
+ hugepages-2Mi:      0
+ memory:             2038624Ki
+ pods:               110
+Allocatable:
+ cpu:                2
+ ephemeral-storage:  16390445849
+ hugepages-2Mi:      0
+ memory:             1936224Ki
+ pods:               110
+...
 ``` 
+
+If we run the previous `requests-pod` pod (which has a CPU requests value of 200) let's see what happens if we run another pod with a requests value of 800 millicores:
+
+```bash
+k run requests-pod-2 --image=busybox --restart Never --requests='cpu=800m,memory=20Mi' -- dd if=/dev/zero of=/dev/null
+```
+
+**Note:** The cpu value here depends on the available CPU for the node. Eg, control plane pods use cpu time, therefore contribute to the allocated resources value.
+
+### CPU Requests affect CPU time sharing
+
+Consider a scenario where 1 pod requests 200m and another requests 1000m), if both pods are working at full capacity, then the CPU time is split in an equal ratio of their requests value (eg, 200:1000 == 1:5 ratio). This mean the first pod would get 16.7% of the node's CPU time and the other would get 83.3%.
+
+However, if the second pod wasn't working at full capacity, then the first pod would be allowed to use the free CPU time. But when the second pod needed the CPU time again, the first pod would have it's CPU time throttled back, up to it's requests CPU value.
+
+### Custom Resources
+
+These were called Opaque Integer Resources but this was changed in 1.8 to Extended Resources.
+
+- Add your resource name to the node object's `capacity` field (eg `example.org/my-gpu-resource`) *Can't be in the kubernetes.io namespace
+- The above can be done with a `PATCH` HTTP request
+- The quanity must be an integer (eg, it couldn't be 100m because this == 0.1 but it could be 2000m or 2)
+- This value will be copied from the capacity field, to the allocatable field automatically.
+- You specify the request in the same way as any other in the pod spec file.
+
+An example of where you might do this is with GPU units.
+
+### Limiting Resources available to a container
+

@@ -1715,3 +1715,77 @@ spec:
 
 ## Chapter 14 - Managing Pod Computational Resources
 
+"Requests" define the resources a container needs to run.
+"Limits" define the max a container is allowed to use.
+
+The definitions are allocated to the containers in a pod, not to the pod as a whole. Therefore the pod's Request and Limit values are the values, multiplied by the number of containers in a pod.
+
+### Units
+
+CPU time is measured in "millicores". 1000 millicores is equal to one CPU core.
+Memory is measured in "mebibytes"
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: requests-pod
+spec:
+  containers:
+  - image: busybox
+    command: ["dd", "if=/dev/zero", "of=/dev/null"]
+    name: main
+    resources:
+      requests:
+        cpu: 200m
+        memory: 10Mi
+```
+
+In this example, the CPU specifies 200 millicores (or 1/5 of a CPU core). This is like saying 5 pods can sufficiently run on a single CPU core. 
+These values are under the `requests` property, so they're the minimum that _you_ think the pod will need to do it's job. It's not specifying the minimum that the pod will use.
+
+If we create this pod, we can look at it's CPU consumption with the `top` command:
+
+```bash
+k create -f ./requests-pod.yml
+k exec -it requests-pod top
+```
+
+The output will look like this:
+
+```
+Mem: 1940176K used, 98448K free, 18248K shrd, 37400K buff, 1169516K cached
+CPU: 17.0% usr 35.4% sys  0.0% nic 47.3% idle  0.0% io  0.0% irq  0.1% sirq
+Load average: 1.15 1.17 0.85 10/861 12
+  PID  PPID USER     STAT   VSZ %VSZ CPU %CPU COMMAND
+    1     0 root     R     1300  0.0   0 50.3 dd if /dev/zero of /dev/null
+    7     0 root     R     1308  0.0   1  0.0 top
+
+```
+
+- The `dd` command will use as much CPU as it can
+- Minikube is running on a 2 core VM
+- The `dd` command is running in a single thread, so it's only able to use 1 core (50% of the VM's 2 core CPU)
+
+This single core is 1000 millicores, which is more than the 200 millicores specified in the pod definition. It's allowed to do this because it's not a limit.
+
+### Pod Scheduling with Requests defined
+
+The scheduler will only schedule the pod on a node which has enough unallocated resources to run the pod.
+
+The scheduler uses the sum of the requested amount of resources for all the pods, rather than the actual capacity the node has. This ensures that a node isn't over provisioned with pods. This can be visualised here:
+
+![pod-resource-provisioning](./imgs/pod-resource-provisioning.png)
+
+In Chapter 11, scheduling mentions how nodes are prioritised. Amongst others, there are 2 prioritisation functions that are requests based: `LeastRequestedPriority` and `MostRequestedPriority`.
+
+- LeastRequestedPriority: The scheduler will prefer nodes with fewer requested resources (ie, a greater amount of unallocated resources).
+- MostRequestedPriority: The scheduler will prefer nodes with more requested resources (ie, less amount of unallocated resources). This option is good for cloud infrastructure where you'd want to squeeze as many pods on the fewest amount of instances possible.
+
+### Checking a Node's Capacity
+
+The kubelet reports the resource metrics for a node to the API server. The Scheduler uses this information when making a scheduling decision. You can view this information with:
+
+```bash
+kubectl describe nodes
+``` 

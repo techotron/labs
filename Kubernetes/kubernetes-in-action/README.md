@@ -1864,4 +1864,4 @@ Delay Timings:
 
 It then stays at 5 mins until the pod stops crashing or it's deleted.
 
-The pods logs (`k logs pod <pod_name>`) or using `k describe pod <pod_name>` command will show why it's crashing. 
+The pods logs (`k logs <pod_name>`) or using `k describe pod <pod_name>` command will show why it's crashing. 

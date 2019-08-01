@@ -1851,4 +1851,17 @@ Unlike resource requests, you are allowed to over provision the limits for a nod
 
 ### Exceeding the limits
 
+When a process tries to allocate memory over its limit, it's killed (`OOMKilled`). If the restart policy is "Always", then the pod is restarted but if it continues to allocate more memory than it's allowed, the kubelet will attempt at restarting it with increasing delays between restarts. This is when you see the `CrashLoopBackOff` status.
 
+Delay Timings:
+
+1st - 10s
+2nd - 20
+3rd - 40s
+4th - 80s
+5th - 120s
+6th - 300s
+
+It then stays at 5 mins until the pod stops crashing or it's deleted.
+
+The pods logs (`k logs pod <pod_name>`) or using `k describe pod <pod_name>` command will show why it's crashing. 

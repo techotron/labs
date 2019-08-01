@@ -1865,3 +1865,16 @@ Delay Timings:
 It then stays at 5 mins until the pod stops crashing or it's deleted.
 
 The pods logs (`k logs <pod_name>`) or using `k describe pod <pod_name>` command will show why it's crashing. 
+
+### How apps see limits 
+
+#### Memory
+
+Containers see the nodes memory - not the container's. This can cause a problem which some apps (particularly Java based apps) where unless the max heap size is specified, it'll set the max sized based on the node's total memory, instead of the total memory available to the container.
+
+This can also have an unexpected side effect when deployed in prod (where total memory of nodes is typically larger) and the app will try to consume more memory than what is allocated in the limits section. This results in OOMKilled errors.
+
+This isn't just solved by setting the `-Xmx` value (which constrains the heap size), as there is still the off-heap memory to deal with. Newer versions now concider the container limits however so an update could solve this.
+
+#### CPU
+

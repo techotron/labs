@@ -487,8 +487,11 @@ This will create a secret with a single entry called `.dockercfg` which is the e
 Add this to the spec in the pod manifest. Commented example is in ./fortune-pod-env-configmap-secret.yml
 
 ## Chapter 8 - Pod Metadata
+
 #### Downward API
+
 ##### Downward API using Env Vars
+
 The Downward API enables you to expose the pod's own metadata to the processes running inside the pod. It allows you to pass the following information:
 
 ![Downward API Info](./imgs/downward-api-info.png)
@@ -1877,4 +1880,19 @@ This can also have an unexpected side effect when deployed in prod (where total 
 This isn't just solved by setting the `-Xmx` value (which constrains the heap size), as there is still the off-heap memory to deal with. Newer versions now concider the container limits however so an update could solve this.
 
 #### CPU
+
+Like with memory, containers see the node's CPU, not just what is limited to them. Eg. on a CPU with 64 cores, a container limited to 1 core will be allocated 1/64 of the CPU's time. However, it doesn't mean the container's process will only run on a single core. At different points in time, it's code may be executed on different cores. 
+
+This could be a disaster in the following scenario:
+- Some applications will look up the number of cores to decide how many threads to run. On a CPU with 64 cores for example, this could cause the app to start too many threads.
+- Also, this would cause memory to spike with the added number of threads.
+
+A way around this would be to limit how many cores the container "saw", by using the Downward API **or** by using cgroups directly and looking at the following files:
+
+- /sys/fs/cgroup/cpu/cpu.cfs_quota_us
+- /sys/fs/cgroup/cpu/cpu.cfs_period_us
+
+**Note:** cgroups (control groups) is a Linux thing which allows you to allocate resources.
+
+### Pod QOS Classes
 

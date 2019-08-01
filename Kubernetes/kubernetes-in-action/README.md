@@ -1896,3 +1896,31 @@ A way around this would be to limit how many cores the container "saw", by using
 
 ### Pod QOS Classes
 
+To help K8s make decisions with how to kill pods when resources are thin, you can catagorise pods into 3 QOS classes:
+
+- BestEffort (lowest priority)
+- Burstable
+- Guaranteed (the highest)
+
+The QOS class is derived from a combination of resource requests and limits for the pod's containers.
+
+These are the rules for a pod to be classed:
+
+#### BestEffort
+
+- Lowest priority
+- Assigned to pods which don't have any requests or limited assigned to them
+- In the worst case, they get almost no CPU time and will be the first to get killed off when memory needs to be freed
+- Because no limits are set for these pods, they can use as much memory as is available
+
+#### Guaranteed
+
+- Highest priority
+- Rqeuests and Limits for CPU and Mem
+- Need to set for each container
+- Limits need to match requests
+
+**Note:** because a container will default it's requests from it's limit's value, just setting a limit is enough to have it classed as guaranteed. 
+
+#### Burstable
+

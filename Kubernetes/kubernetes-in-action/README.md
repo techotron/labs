@@ -1965,5 +1965,23 @@ These resources are used by the LimitRanger Admission Control plugin, which will
 
 The LimitRange resource applies to each individual pod/container in the same namespace. It doesn't apply to all of the pods in the namespace as a whole - this can be specified with the ResourceQuota resource.
 
+#### Creating a LimitResource
 
+```bash
+k create -f ./limits.yml
+```
 
+- You can set ratios of resources, eg, in the example `limits.yml` the `maxLimitRequestRatio` for CPU (4) means the max limit value can't be more than 4 times the requests value.
+
+Test the limits by trying to deploy the following pod:
+
+```bash
+k create -f ./limits-pod-too-big.yml
+
+# Response:
+The Pod "too-big" is invalid: spec.containers[0].resources.requests: Invalid value: "2": must be less than or equal to cpu limit
+```
+
+### Resource Quotas
+
+A ResourceQuota will limit the total resources available in a namespace.

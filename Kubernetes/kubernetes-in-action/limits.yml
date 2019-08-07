@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: example
+spec:
+  limits:
+# Limits for the pod as a whole (the sum of all containers in the pod)
+    - type: Pod
+      min:
+        cpu: 50m
+        memory: 5Mi
+      max:
+        cpu: 1
+        memory: 1Gi
+# Limits for containers
+    - type: Container
+      defaultRequest:
+        cpu: 100m
+        memory: 10Mi
+      default:
+        cpu: 200m
+        memory: 100Mi
+      min:
+        cpu: 50m
+        memory: 5Mi
+      max:
+        cpu: 1
+        memory: 1Gi
+# You can set a ratio of limits to requests
+      maxLimitRequestRatio:
+        cpu: 4
+        memory: 10
+# Limits for PVCs
+    - type: PersistentVolumeClaim
+      min:
+        storage: 1Gi
+      max:
+        storage: 10Gi

@@ -1924,3 +1924,46 @@ These are the rules for a pod to be classed:
 
 #### Burstable
 
+- Between BestEffort and Guaranteed
+- Applies to pods where the Requests don't match the limits or to pods which don't have limits but do have requests.
+- Applied to pods where one container's requests match the limits but another container (in the same pod) has no limits specified.
+
+#### QoS rules:
+
+![qos-rules](./imgs/qos-rules.png)
+
+Working out the QOS of a container:
+
+![qos-table](./imgs/qos-table.png)
+
+Working out the QOS of a pod:
+
+![pod-qos-table](./imgs/pod-qos-table.png)
+
+### How processes are killed in an over commited system
+
+1. BestEffort
+2. Burstable
+3. Guarenteed (only when system processes need memory)
+
+If there are multiple pods in the same QOS class, then the pod with the highest OOM score is killed off.
+
+#### OOM Score
+
+This is a score which consists of 2 things:
+
+- Percentage of available memory the process is consuming
+- Fixed OOM score adjustment (based on pods QOS class and the pod's requested memory)
+
+When 2 burstable (single container) pods are running, the system will kill the one using the most amount of it's requested memory as a percentage.
+
+### Default requests/limits per namespace
+
+Use a LimitRange resource to set min, max and defaults at the namespace level. 
+
+These resources are used by the LimitRanger Admission Control plugin, which will validate a pod spec when it's sent to the API server. Without a limit range, the scheduler will accept the pod spec but won't schedule if (unless the resources are there of course).
+
+The LimitRange resource applies to each individual pod/container in the same namespace. It doesn't apply to all of the pods in the namespace as a whole - this can be specified with the ResourceQuota resource.
+
+
+

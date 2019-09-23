@@ -1984,4 +1984,86 @@ The Pod "too-big" is invalid: spec.containers[0].resources.requests: Invalid val
 
 ### Resource Quotas
 
-A ResourceQuota will limit the total resources available in a namespace.
+A ResourceQuota will limit the total resources available in a namespace as a whole. You can limit resource requests/limits, storage, number of objects, etc in a namespace. It applies at the namespace level.
+
+```bash
+k create -f ./quota-cpu-memory.yml
+```
+
+Lookup how much of the resource quota is being used with:
+
+```bash
+k describe quota
+```
+
+If you try and deploy a pod without configured limits or requests, you'll get the following error:
+
+```bash
+Error from server (Forbidden): error when creating "https://raw.githubusercontent.com/luksa/kubernetes-in-action/master/Chapter03/kubia-manual.yaml": pods "kubia-manual" is forbidden: failed quota: cpu-and-mem: must specify limits.cpu,limits.memory,requests.cpu,requests.memory
+```
+
+You can limit the number of objects to create with the following:
+
+```bash
+k create -f ./quota-object-count.yml
+```
+
+This definition has a list of resources and the limits of how many of each resource type can be created. You can scope the limits to include specific states of the resources, eg, `Terminating`, `NonTerminating`, `BestEffort` and `NotBestEffort`. The best effort ones relate to pods with a QoS class assigned to them.
+
+The "terminating" ones are not related to pods which are in the process of shutting down - but are referring to pods which have the `active-Deadline-Seconds` field in the pod spec. This field marks the amount of time a pod is allowed to be active on the node until it's determined as failed and then terminated. The `Terminated` scope refers to pod which have the `active-Deadline-Seconds` set.
+
+See [quota-scoped.yml](./quota-scoped.yml) for an example.
+
+### Monitoring Resources
+
+In this example, we'll use cAdvisor (which the Kubelet already runs as an agent) to provide the resource consumption; Heapster to gather the metrics and Grafana as the UI to display the metrics.
+
+Heapster runs as a pod on one of the nodes with a service, so it has a stable IP with which Grafana can connect to.
+
+The architecture will look like this:
+
+![monitoring-k8s](./imgs/monitoring-k8s.png)
+
+Heapster is enabled by default on nodes in GKE.
+To enable it on minikube, run the following:
+
+`minikube addons enable heapster`
+
+In minikube, this will start up a heapster pod and an influxdb/grafana pod.
+
+With heapster, you can see the actual CPU and memory usage on a node with:
+
+```bash
+k top node
+```
+
+You can view the same but at the pod level too:
+
+```bash
+k top pod --all-namespaces
+```
+
+**Note:** If you see this error:
+
+```bash
+W0312 22:12:58.021885 15126 top_pod.go:186] Metrics not available for pod default/kubia-3773182134-63bmb, age: 1h24m19.021873823s error: Metrics not available for pod default/kubia-3773182134-63bmb, age: 1h24m19.021873823s
+```
+
+This will most likely be down to the fact that Heapster aggregates the metrics over a few minutes before exposing them. Just wait a bit and then try it again.
+
+You can view the same at the container level with:
+
+```bash
+k top pods --all-namespaces --containers
+```
+
+In minikube, to open Grafana, run the following:
+
+```bash
+minikube service monitoring-grafana -n kube-system
+```
+
+This will open the node port service for Grafana using the default browser.
+
+## Chapter 15 - Auto Scaling of pods and cluster nodes
+

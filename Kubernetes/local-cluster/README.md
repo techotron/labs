@@ -12,7 +12,7 @@ Run `./start-virtual-box.sh` to start the VirtualBox VMs
 
 ### Helm
 
-- `k create -f ` - Setup ClusterRole binding and service account to grant Tiller necessary permissions
+- `k create -f https://raw.githubusercontent.com/techotron/labs/master/Kubernetes/local-cluster/helm-rbac.yml` - Setup ClusterRole binding and service account to grant Tiller necessary permissions
 - `helm init --service-account tiller --history-max 200` - Install Helm on cluster (pod will get deployed in `kube-system` NS)
 - 
 

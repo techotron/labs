@@ -19,8 +19,8 @@ Create a deployment, lb service and ingress rule for kubia (as an example):
 
 # Troubleshooting
 
--`nginx -V` - View nginx details (loaded modules, version etc)
--`nginx -t` - Verify configuration
--`curl --resolve cluster.kube:30293:192.168.86.60 https://cluster.kube:30293/tea --insecure` - on the fly hostname resolution for cURL request
--`k exec nginx-ingress-6957586bf6-rdt6f -- cat /etc/nginx/conf.d/nginx-ingress-eddy-ingress.conf` - nginx config which has been created dynamically by the controller when you create a new deployment with ingress rule. Notice how the `upstream` block changes each time you change the spec.replicas of the deployment
--`k edit deployment kubia` - edit the deployment on the fly
+- `nginx -V` - View nginx details (loaded modules, version etc)
+- `nginx -t` - Verify configuration
+- `curl --resolve cluster.kube:30293:192.168.86.60 https://cluster.kube:30293/tea --insecure` - on the fly hostname resolution for cURL request
+- `k exec nginx-ingress-6957586bf6-rdt6f -- cat /etc/nginx/conf.d/nginx-ingress-eddy-ingress.conf` - nginx config which has been created dynamically by the controller when you create a new deployment with ingress rule. Notice how the `upstream` block changes each time you change the spec.replicas of the deployment
+- `k edit deployment kubia` - edit the deployment on the fly

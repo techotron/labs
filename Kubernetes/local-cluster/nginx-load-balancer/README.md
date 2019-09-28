@@ -1,6 +1,7 @@
 # Setup
 
 Requires nginx ingress controller (https://kubernetes.github.io/ingress-nginx/deploy/#bare-metal)
+nginx cafe example: https://github.com/nginxinc/kubernetes-ingress/tree/master/examples/complete-example
 
 This will install the dependancies (nginx ingress controller etc)
 

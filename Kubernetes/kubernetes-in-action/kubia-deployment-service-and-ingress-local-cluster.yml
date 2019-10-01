@@ -35,7 +35,6 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: eddy-ingress
-  namespace: nginx-ingress
 spec:
   rules:
   - host: kubia.cluster.kube

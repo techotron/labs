@@ -136,6 +136,13 @@ pdk new class config
 pdk new class service
 pdk new class params
 pdk new class vhosts
+pdk new class loadbalancer
+```
+
+**Note:** TODO: Test copying the contents of ./nginx-lb to /etc/puppetlabs/code/environments/production/modules/nginx and seeing if this will work:
+
+```bash
+scp -i ~/.ssh/lab_key -r ./nginx-lb root@192.168.86.71:/etc/puppetlabs/code/environments/production/modules/nginx
 ```
 
 Use the following to check configs:
@@ -155,19 +162,54 @@ The node level config is:
 ```yaml
 
 ---
-nginx::vhosts_port: '80'
+nginx::vhosts_port: '8080'
 nginx::vhosts_root: '/var/www'
 nginx::vhosts_name: 'the-puppet-project.com'
 nginx::vhosts_ensure: 'present'
+nginx::lb_port: '80'
+nginx::lb_name: 'lb'
+nginx::lb_ensure: 'present'
 ```
+
+#### General Server Configuration
+
+- Install the firewall module (from the `production` directory) 
+
+```bash
+puppet module install puppetlabs-firewall
+```
+
+This will install the module plus any dependencies it has.
+
+We'll now create a new module called "my_firewall" which will contain a couple of manifests to apply the firewall config we want:
+
+(Just copy these to the master. Paths are relative to this readme)
+
+```bash
+scp -i ~/.ssh/lab_key -r ./my_firewall root@192.168.86.71:/etc/puppetlabs/code/environments/production/modules/
+```
+
+#### Last steps
 
 Now we need to map our node to the configuration by using the `/etc/puppetlabs/code/environments/production/manifests/site.pp` file. Add the following to the site.pp (create it if it doesn't exist):
 
 ```bash
-site.pp
 node 'puppet-nginx-lb1.lab' {
   class {'nginx':}
+  class { 'firewall': }
+  resources { 'firewall':
+    purge => true,
+  }
+  
+ Firewall {
+     before  => Class['my_firewall::post'],
+     require => Class['my_firewall::pre'],
+ }
+
+ class { ['my_firewall::pre', 'my_firewall::post']: }
+  
 }
+
 ```
 
 Log onto the node and run the following to initiate a node to fetch and run config

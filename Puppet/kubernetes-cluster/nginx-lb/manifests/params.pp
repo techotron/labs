@@ -13,11 +13,13 @@ class nginx::params {
       $config_path = '/etc/nginx/nginx.conf'
       $config_source = 'puppet:///modules/nginx/rh-nginx.conf'
       $vhosts_dir = '/etc/nginx/conf.d'
+      $lb_dir = '/etc/nginx'
     }
     'Debian': {
       $config_path = '/etc/nginx/nginx.conf'
       $config_source = 'puppet:///modules/nginx/deb-nginx.conf'
       $vhosts_dir = '/etc/nginx/sites-available'
+      $lb_dir = '/etc/nginx/sites-available'
     }
   }
 }

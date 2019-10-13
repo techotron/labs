@@ -1,0 +1,33 @@
+stream {
+    upstream k8s-nodes_https {
+        server 192.168.86.60:30293 max_fails=3 fail_timeout=10s;
+        server 192.168.86.61:30293 max_fails=3 fail_timeout=10s;
+        server 192.168.86.62:30293 max_fails=3 fail_timeout=10s;
+    }
+
+    upstream k8s-nodes_http {
+        server 192.168.86.60:30790 max_fails=3 fail_timeout=10s;
+        server 192.168.86.61:30790 max_fails=3 fail_timeout=10s;
+        server 192.168.86.62:30790 max_fails=3 fail_timeout=10s;
+    }
+
+log_format basic '$remote_addr [$time_local] '
+                 '$protocol $status $bytes_sent $bytes_received '
+                 '$session_time "$upstream_addr" '
+                 '"$upstream_bytes_sent" "$upstream_bytes_received" "$upstream_connect_time"';
+
+    access_log /var/log/nginx/k8s-local-cluster-lb_access.log basic;
+    error_log  /var/log/nginx/k8s-local-lcuster-lb_error.log;
+
+    server {
+        listen 443;
+        proxy_pass k8s-nodes_https;
+        proxy_next_upstream on;
+    }
+
+    server {
+        listen <%= $nginx::lb_port %>;
+        proxy_pass k8s-nodes_http;
+        proxy_next_upstream on;
+    }
+}

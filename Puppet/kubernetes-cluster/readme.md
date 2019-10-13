@@ -16,6 +16,7 @@ There are 2 images, Centos7 and Ubuntu18
 - Puppet repository downloaded and updated. Apt updated:
 
 ```bash
+hostnamectl set-hostname ztemplate-puppet-ubuntu18
 wget https://apt.puppetlabs.com/puppet6-release-bionic.deb
 dpkg -i puppet6-release-bionic.deb
 apt update
@@ -23,52 +24,154 @@ apt update
 
 ### Centos7 Puppet Template
 
-#TODO: create centos7 puppet template and run the below:
-
+- SSH generated on host, with the public key copied to `/root/.ssh/authorized_keys`
 - Updated, added `epel-release`, installed wget and vim
 
 ```bash
-yum update -y
+hostnamectl set-hostname ztemplate-puppet-centos7
 yum install -y epel-release
 yum install wget -y
 yum install vim -y
+yum update -y
+
 ```
 
-- SSH keys generated on host, with the public key copied to `/root/.ssh/authorized_keys`
 - Add Puppet repos and install puppet:
 
 ```bash
 sudo rpm -Uvh https://yum.puppet.com/puppet6/puppet6-release-el-7.noarch.rpm
 yum update -y
+```
+
+- Install the puppet agent
+
+```bash
 yum install puppet-agent -y
 systemctl start puppet
 systemctl enable puppet
 ```
 
+- Add puppet master IP to /etc/hosts
+
+```bash
+192.168.86.71 master-puppet-01.lab localhost puppet
+```
+
+- Add puppet master to `/etc/puppetlabs/puppet/puppet.conf`:
+
+```bash
+[main]
+server = puppet-master-01.lab
+```
+
 ### Puppet Master
-
-#### VirtualBox VM Configuration
-
-The master will need to download resources from the internet. In order to keep the environment portable (no matter what network I'm connect to at the time) I've added the nodes to the local vboxnet switch. For the master to connect to both these and the internet, it needs 2 interfaces.
-
-- Cloned from Ubuntu18 image (new MAC address generated)
-- Bridged Adapter (connected to whatever wifi/ethernet network you're connected to)
-- Host-only Adapter
-
-#### OS Configuration
-
-#TODO: run the below on the master
 
 - Using the Ubuntu18 image (above)
 - Set the hostname: `hostnamectl set-hostname master-puppet-01.lab`
-- Configured the hosts file: `127.0.0.1   master-puppet-01.lab localhost puppet`
+- Configured the hosts file: `127.0.0.1   puppet-master-01.lab localhost puppet`
+- Installed puppetserver: `apt-get install puppetserver pdk -y`
+- Added the following to `/etc/puppetlabs/puppet/puppet.conf`
+
+```bash
+[main]
+certname = puppet-master-01.lab
+
+[master]
+certname = puppet-master-01.lab
+```
+
+- Setup Puppet CA services: `/opt/puppetlabs/bin/puppetserver ca setup`
+- Change memory limits for the server service: `vim /etc/default/puppetserver`
+
+```bash
+JAVA_ARGS="-Xms512m -Xmx512m -Djruby.logger.class=com.puppetlabs.jruby_utils.jruby.Slf4jLogger"
+```
+
+- Start and enable puppet server:
+
+```bash
+systemctl start puppetserver
+systemctl enable puppetserver
+```
+
+**Note:** Running the first puppet server from the full path will add it to your bash profile but you'll need to reload this in order for it to apply (log out/back in or use `source`)
 
 ### Puppet Nodes
 
-#### VirtualBox VM Configuration
+- Check the certificate fingerprint of the agent:
 
-- Cloned from Template (new MAC address generated)
-- Host-only Adapter
+```bash
+puppet agent --fingerprint
+```
 
+- Sign the node certificate (from the master):
 
+```bash
+puppetserver ca list
 
+# Check the hostname of the cert you want to sign, then run
+puppetserver ca sign --certname puppet-nginx-lb1.lab
+```
+
+## Setup Nginx Load Balancer
+
+Now that we have a puppet master and our first agent configured and connected, we can start with configuring it.
+
+### Create new module
+
+- Create boilerplate files:
+
+Run this in the `/etc/puppetlabs/code/environments/production/modules` directory
+
+```bash
+pdk new module nginx
+```
+
+From our new module directory ("nginx"), we need to create all the new classes we'll need. All the file contents are [here](./nginx-lb/manifests/). This creates more than just the .pp files (which I've yet to learn about) so need to create them using the pdk!
+
+```bash
+pdk new class install
+pdk new class nginx # This is how we create the init.pp manifest, which ties all the other classes together.
+pdk new class config
+pdk new class service
+pdk new class params
+pdk new class vhosts
+```
+
+Use the following to check configs:
+
+```bash
+puppet parser validate file.pp
+```
+
+Copy the contents of the .pp files [here](./nginx-lb/manifests/) to `/etc/puppetlabs/code/environments/production/modules/nginx/manifests/`
+
+The Hiera config is located at different levels, the module one (typically in the module directory at ./data/common.yaml) and then in the node level in the production directory at ./data/nodes/SERVERNAME.yaml
+
+For this configuration, the module level config is [here](./data/common.yaml)
+
+The node level config is:
+
+```yaml
+
+---
+nginx::vhosts_port: '80'
+nginx::vhosts_root: '/var/www'
+nginx::vhosts_name: 'the-puppet-project.com'
+nginx::vhosts_ensure: 'present'
+```
+
+Now we need to map our node to the configuration by using the `/etc/puppetlabs/code/environments/production/manifests/site.pp` file. Add the following to the site.pp (create it if it doesn't exist):
+
+```bash
+site.pp
+node 'puppet-nginx-lb1.lab' {
+  class {'nginx':}
+}
+```
+
+Log onto the node and run the following to initiate a node to fetch and run config
+
+```bash
+puppet agent -t
+```

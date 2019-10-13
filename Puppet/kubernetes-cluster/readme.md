@@ -13,8 +13,13 @@ There are 2 images, Centos7 and Ubuntu18
 ### Ubuntu18 Puppet Template
 
 - SSH generated on host, with the public key copied to `/root/.ssh/authorized_keys`
+- Puppet repository downloaded and updated. Apt updated:
 
-#TODO: install puppet packages (not server though)
+```bash
+wget https://apt.puppetlabs.com/puppet6-release-bionic.deb
+dpkg -i puppet6-release-bionic.deb
+apt update
+```
 
 ### Centos7 Puppet Template
 

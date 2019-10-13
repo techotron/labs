@@ -217,3 +217,8 @@ Log onto the node and run the following to initiate a node to fetch and run conf
 ```bash
 puppet agent -t
 ```
+
+#TODO: 
+
+- [] CFN template to deploy puppet master
+- [] CFN template to deploy puppet nodes

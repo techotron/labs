@@ -18,7 +18,7 @@ class nginx::vhosts (
   }
 
   file { "${nginx::vhosts_root}/index.html":
-    path    => "/var/www/index.html",
+    path    => "${nginx::vhosts_root}/index.html",
     source => 'puppet:///modules/nginx/index.html',
     ensure  => 'present',
   }

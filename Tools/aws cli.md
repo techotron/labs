@@ -44,3 +44,9 @@ aws cloudformation list-change-sets \
     --stack-name my-stack-name \
     --query 'Summaries[?contains(ChangeSetName, `PR-123`) == `true`].ChangeSetName'
 ```
+
+Return resource based on tag query:
+
+```bash
+aws ec2 describe-vpcs --query 'Vpcs[?Tags[?Key==`Name`]|[?Value==`EDDYS_VPC`]].VpcId' --output text
+```

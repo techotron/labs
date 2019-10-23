@@ -1,26 +1,28 @@
 # Create a new instance of the latest Ubuntu 14.04 on an
 # t2.micro node with an AWS Tag naming it "HelloWorld"
 
-data "aws_ami" "ubuntu" {
-  most_recent   = true
+data "aws_ami" "amazon-linux-2" {
+ most_recent = true
 
-  filter {
-    name        = "name"
-    values      = ["ubuntu/images/hvm-ssd/ubuntu-trusty-14.04-amd64-server-*"]
-  }
 
-  filter {
-    name        = "virtualization-type"
-    values      = ["hvm"]
-  }
+ filter {
+   name   = "owner-alias"
+   values = [ "amazon" ]
+ }
 
-  owners        = ["099720109477"] # Canonical
+ owners = [ "amazon" ]
+
+
+ filter {
+   name   = "name"
+   values = [ "amzn2-ami-hvm*" ]
+ }
 }
 
 resource "aws_instance" "server" {
-  ami           = "${data.aws_ami.ubuntu.id}"
+  ami           = "${data.aws_ami.amazon-linux-2.id}"
   instance_type = "t2.micro"
-  key_name      = "snowkey"
+  key_name      = "snowco"
 
   tags = {
     Name        = "simple-ec2"

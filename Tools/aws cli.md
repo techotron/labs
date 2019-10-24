@@ -8,7 +8,7 @@ Command to retrieve the "KmsKeyArn" output value. It will output as text, meanin
 ```bash
 aws cloudformation describe-stacks \
                 --stack-name eddy-key-stack \
-                --query \'Stacks[].Outputs[?contains(OutputKey, `KmsKeyArn`) == `true`].OutputValue[]\' --output text
+                --query 'Stacks[].Outputs[?contains(OutputKey, `KmsKeyArn`) == `true`].OutputValue[]' --output text
 ```
 
 Command to get the ReturnCertExpiry using the equals operator:

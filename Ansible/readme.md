@@ -1,6 +1,6 @@
 # Ansible
 
-Agentless Config Manager
+Agentless Config Manager. Uses SSH to log into a remote system and configure it. Config runs are idempotent. 
 
 ## Config
 

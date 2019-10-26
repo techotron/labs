@@ -44,10 +44,27 @@ ssh-copy-id <AGENT_HOSTNAME>
 
 These need to be run as the user that was configured above, so you may need to `sudo su - ansible` in order to run it, because ansible will need to use the key created.
 
-- Return Setup facts:
+- Return Setup facts from the `setup` module:
 
 ```bash
 ansible <AGENT_HOSTNAME> -m setup
+```
+
+### Example: Installing Apache
+
+- Install Apache:
+
+```bash
+ansible <AGENT_HOSTNAME> -b -m yum -a "name=httpd state=latest"
+```
+
+**Note:** `-b` is "become", which replaces the `-s` flag, used for sudo operations
+**Note2:** `-a` is for parameters to pass. If used without a module, it's like running a shell command on the target system. If you look at the module docs, you'll see `name` and `state` defined.
+
+- Start the Apache service:
+
+```bash
+ansible <AGENT_HOSTNAME> -b -m service -a "name=httpd state=started"
 ```
 
 ## Working with AWS

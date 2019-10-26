@@ -38,7 +38,7 @@ ssh-copy-id <AGENT_HOSTNAME>
 
 ## Configure Ansible Master
 
-
+1. Add agents to Ansible hosts file with an alias: `techotron2c ansible_host=<AGENT_HOSTNAME>`
 
 ## Working with AWS
 

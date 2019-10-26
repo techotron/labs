@@ -36,9 +36,19 @@ ssh-keygen
 ssh-copy-id <AGENT_HOSTNAME>
 ```
 
-## Configure Ansible Master
+### Configure Ansible Master
 
 1. Add agents to Ansible hosts file with an alias: `techotron2c ansible_host=<AGENT_HOSTNAME>`
+
+## Ah-Hoc commands
+
+These need to be run as the user that was configured above, so you may need to `sudo su - ansible` in order to run it, because ansible will need to use the key created.
+
+- Return Setup facts:
+
+```bash
+ansible <AGENT_HOSTNAME> -m setup
+```
 
 ## Working with AWS
 

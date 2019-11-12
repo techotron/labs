@@ -2067,3 +2067,4 @@ This will open the node port service for Grafana using the default browser.
 
 ## Chapter 15 - Auto Scaling of pods and cluster nodes
 
+The Horizontal controller is enabled when you create a HorizontalPodAutoscaler (HPA) resource. This controller will periodically monitor the pod metrics and ensure enough pods are created to meet the configuration. 

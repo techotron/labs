@@ -1,9 +1,7 @@
 pipeline {
   agent {
-    node {
-      label 'docker'
-      customWorkspace "./workspace/${BUILD_TAG}"
-    }
+    label 'docker'
+    customWorkspace "./workspace/${BUILD_TAG}"
   }
   options {
     timestamps()

@@ -22,6 +22,7 @@ pipeline {
         }
       }
       steps {
+        scm()
         script {
           // 	config = readYaml file: 'pipelines/Jenkinsfile.cicd.yml'
           // 	service_name = config.service_name

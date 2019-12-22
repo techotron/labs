@@ -1,7 +1,9 @@
 pipeline {
   agent {
-    label 'docker'
-    customWorkspace "./workspace/${BUILD_TAG}"
+    node {
+      label 'docker'
+      customWorkspace "./workspace/${BUILD_TAG}"
+    }
   }
   options {
     timestamps()
@@ -22,7 +24,6 @@ pipeline {
         }
       }
       steps {
-        scm()
         script {
           // 	config = readYaml file: 'pipelines/Jenkinsfile.cicd.yml'
           // 	service_name = config.service_name

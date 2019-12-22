@@ -1,8 +1,7 @@
 pipeline {
   agent {
     node {
-      label '!master'
-      // label 'docker'
+      label 'docker'
       customWorkspace "./workspace/${BUILD_TAG}"
     }
   }

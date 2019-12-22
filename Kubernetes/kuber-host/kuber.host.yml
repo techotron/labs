@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
   name: kubia
@@ -13,6 +13,8 @@ spec:
       containers:
         - image: luksa/kubia:v1
           name: nodejs
+          resources:
+            limits: { memory: "150Mi", cpu: "100m" }
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -34,13 +36,16 @@ spec:
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: eddy-ingress
+  name: kubia-ingress
 spec:
+  tls:
+    - hosts: [learn-k8s.kuber.host]
+      secretName: learn-k8s-kuber-host-tls
   rules:
-  - host: kubia.cluster.kube
+  - host: learn-k8s.kuber.host
     http:
       paths:
-      - backend:
+      - path: /
+        backend:
           serviceName: kubia
           servicePort: 80
-        path: /

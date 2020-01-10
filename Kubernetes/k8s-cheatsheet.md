@@ -276,3 +276,13 @@ gcloud container clusters describe <cluster-name> | grep -E "(username|password)
 ```
 
 **Note:** for getting the dashboard details in minikube, use the minikube-cheatsheet.md
+
+## Starting minikube using an OIDC provider
+
+```
+minikube start --cpus 4 --memory 22000 \
+	--extra-config apiserver.oidc-issuer-url=https://keycloak.esnow.uk/auth/realms/master \
+	--extra-config apiserver.oidc-username-claim=email \
+	--extra-config apiserver.oidc-client-id=kubernetes_minikube \
+        --extra-config apiserver.authorization-mode=RBAC
+```

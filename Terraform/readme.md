@@ -1,5 +1,11 @@
 # Terraform
 
+## Versioning
+
+You can use tfenv (installed via brew) to manage the version of terraform.
+
+Install a specific version: `tfenv install 0.12.21`
+
 ## Quick Start
 
 ### Providers

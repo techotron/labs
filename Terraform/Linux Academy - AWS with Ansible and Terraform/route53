@@ -1,0 +1,21 @@
+Old NS
+ns-1327.awsdns-37.org
+ns-1833.awsdns-37.co.uk
+ns-516.awsdns-00.net
+ns-35.awsdns-04.com
+
+
+New delegation set:
+{
+    "Location": "https://route53.amazonaws.com/2013-04-01/delegationset/N1ZFIZNWM0NA6W",
+    "DelegationSet": {
+        "NameServers": [
+            "ns-761.awsdns-31.net",
+            "ns-1657.awsdns-15.co.uk",
+            "ns-425.awsdns-53.com",
+            "ns-1026.awsdns-00.org"
+        ],
+        "CallerReference": "1224",
+        "Id": "/delegationset/N1ZFIZNWM0NA6W"
+    }
+}

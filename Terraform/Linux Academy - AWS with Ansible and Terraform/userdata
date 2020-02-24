@@ -1,2 +1,1 @@
-#!/bin/bash
-echo "hello, world"
+# https://github.com/terraform-aws-modules/terraform-aws-autoscaling/issues/23

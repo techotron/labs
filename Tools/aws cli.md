@@ -50,3 +50,9 @@ Return resource based on tag query:
 ```bash
 aws ec2 describe-vpcs --query 'Vpcs[?Tags[?Key==`Name`]|[?Value==`EDDYS_VPC`]].VpcId' --output text
 ```
+
+Return Classic ELB based on matching tag:
+
+```bash
+for lb in $(aws elb describe-load-balancers --region us-east-1 | jq -r '.LoadBalancerDescriptions[].LoadBalancerName'); do aws elb describe-tags --load-balancer-names $lb --query 'TagDescriptions[?Tags[?Key == `aws:cloudformation:stack-name`]|[?Value == `SOME_MATCHING_VALUE`]].LoadBalancerName' --output text --region us-east-1; done
+```

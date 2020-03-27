@@ -1,0 +1,36 @@
+version: '3'
+services:
+  mysqldb:
+    image: mysql:5.7
+    environment:
+      MYSQL_DATABASE: grafana
+      MYSQL_USER: app_grafana
+      MYSQL_PASSWORD: qa_app_grafana
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - 3306:3306
+  grafana:
+    image: grafana/grafana:6.5.2
+    environment: 
+      GF_INSTALL_PLUGINS: goshposh-metaqueries-datasource,grafana-piechart-panel,grafana-simple-json-datasource
+      GF_SECURITY_ADMIN_PASSWORD: secret
+      GF_SECURITY_ADMIN_USER: admin
+      GF_DATABASE_TYPE: mysql
+      GF_DATABASE_HOST: mysqldb
+      GF_DATABASE_NAME: grafana
+      GF_DATABASE_USER: app_grafana
+      GF_DATABASE_PASSWORD: qa_app_grafana
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_USERS_VIEWERS_CAN_EDIT: "true"
+    ports:
+      - 3000:3000
+
+
+# Instructions:
+
+# 1. Dump prod sql:
+# mysqldump -u app_grafana -pPASSWORD -h RDSENDPOINT --databases grafana --lock-tables=false --column-statistics=0 > grafana_prod.sql
+# 2. Start docker containers
+# docker-compose up -d
+# 3. Import the SQL DB
+# docker exec -i $(docker ps -q --filter name=mysqldb_1) sh -c 'exec mysql -uroot -ppassword' < ./grafana_prod.sql

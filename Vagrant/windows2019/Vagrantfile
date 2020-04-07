@@ -1,0 +1,7 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "peru/windows-server-2019-datacenter-x64-eval"
+  config.vm.box_version = "20200401.01"
+end

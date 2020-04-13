@@ -1,0 +1,31 @@
+---
+- name: Install Apache
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Install Apache.
+      yum: 
+        name: 
+          - httpd
+          - httpd-devel
+        state: present
+      # become: true (you can add this at the task level or at the playbook level)
+    - name: Copy configuration files.
+      copy:
+        # Jinja templating. This is using the "item" object which is created with the copy module.
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: root
+        group: root
+        mode: 0644
+      with_items:
+        - src: httpd.conf
+          dest: /etc/httpd/conf/httpd.conf
+        - src: httpd-vhosts.conf
+          dest: /etc/httpd/conf/httpd-vhosts.conf
+    - name: Mark sure Apache is started now and at boot.
+      service:
+        name: httpd
+        state: started
+        enabled: true

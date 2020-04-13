@@ -128,7 +128,7 @@ ansible -i inventory db -b -m yum -a "name=MySQL-python state=present"
 ansible -i inventory db -b -m mysql_user -a "name=django host=% password=12345 priv=*.*:ALL state=present"
 ```
 
-## Running operations in the backgroup
+## Running operations in the background
 
 You might want to do this if you're running a particularly long command (like an upgrade for example):
 
@@ -145,3 +145,15 @@ ansible -i inventory multi -b -m async_status -a "jid=423069903046.10330"
 ```
 
 **Note:** this will fail amongst servers which that job id doesn't match. Use the --limit flag to specify the server that job id pertitent for.
+
+You can also check the logs for ansible related entries:
+
+```bash
+# NOTE: This will fail because the command module (which is the default module) doesn't handle pipes and redirection
+ansible -i inventory multi -b -a "tail /var/log/messages | grep ansible-command | wc -l"
+
+# Use the "shell" module instead (not considered best practise):
+ansible -i inventory multi -b -m shell -a "tail /var/log/messages | grep ansible-command | wc -l"
+```
+
+

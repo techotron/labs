@@ -92,7 +92,7 @@ ansible -i inventory multi -b -m service -a "name=ntpd status=started enabled=ye
 
 Example command which will update the time and date on the servers using the specified upstream NTP server:
 
-``bash
+```bash
 ansible -i inventory multi -b -a "ntpdate -q 0.rhel.pool.ntp.org"
 ```
 

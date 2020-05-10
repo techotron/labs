@@ -56,3 +56,9 @@ Return Classic ELB based on matching tag:
 ```bash
 for lb in $(aws elb describe-load-balancers --region us-east-1 | jq -r '.LoadBalancerDescriptions[].LoadBalancerName'); do aws elb describe-tags --load-balancer-names $lb --query 'TagDescriptions[?Tags[?Key == `aws:cloudformation:stack-name`]|[?Value == `SOME_MATCHING_VALUE`]].LoadBalancerName' --output text --region us-east-1; done
 ```
+
+Return cloudformation stacks based on status and starts_with, ends_with filters:
+
+```bash
+aws cloudformation list-stacks --region us-east-1 --stack-status-filter CREATE_FAILED CREATE_COMPLETE ROLLBACK_FAILED ROLLBACK_COMPLETE DELETE_FAILED UPDATE_COMPLETE UPDATE_ROLLBACK_FAILED UPDATE_ROLLBACK_COMPLETE --query 'StackSummaries[?starts_with(StackName, `eddy-application-`) == `true`]|[?ends_with(StackName, `-alb`) == `true`].StackName'
+```

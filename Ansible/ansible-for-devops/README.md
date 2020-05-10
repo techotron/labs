@@ -65,13 +65,13 @@ ansible -i inventory app -a "free -m" --limit "192.168.60.4"
 
 **Note:** The `--limit` flag is a list type, so you could add multiple IPs here.
 
-To return all everything about the server that Ansible has disovered: 
+To return everything about the server that Ansible has disovered: 
 
 ```bash
 ansible -i inventory db -m setup
 ```
 
-**Note:** The `-m` flag means "module". In this example we're using the setup module. If the module is specified, Ansible will default to the command module.
+**Note:** The `-m` flag means "module". In this example we're using the setup module. If the module isn't specified, Ansible will default to the command module.
 
 Install the NTP service on all servers:
 

@@ -8,9 +8,9 @@
 
 ## Useful commands
 
-(Run within this directory)
+(Run within chapter 2 directory)
 
-||Task||Command||
+|Task|Command|
 |---|---|
 |Initialise vagrantfile|`vagrant init`|
 |Start VM using the vagrantfile|`vagrant up`|

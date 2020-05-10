@@ -188,9 +188,9 @@ ansible -i inventory multi -b -m shell -a "tail /var/log/messages | grep ansible
 
 The inventory is an example of a simple AWS instance. This specific instance no longer exists.
 
-There are 2 examples of playbooks. [playbook_just-commands.yml](./playbook_just-commands.yml) is a poor example of how to build a playbook by just using the command module. 
+There are 2 examples of playbooks. [playbook_just-commands.yml](./chapter4/playbook_just-commands.yml) is a poor example of how to build a playbook by just using the command module. 
 
-The better exmaple is [playbook.yml](./playbook.yml) which uses a variety of module to accomplish the same task.
+The better exmaple is [playbook.yml](./chapter4/playbook.yml) which uses a variety of module to accomplish the same task.
 
 **Note:** The playbook doesn't complete successfully because the http configuration files are blank and therefore the service fails to start in the last task but it serves as an example.
 

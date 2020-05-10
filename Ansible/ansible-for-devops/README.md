@@ -202,7 +202,7 @@ Similar parameters for `ansible` exist for `ansible-playbook`. To play this book
 ansible-playbook -i inventory playbook.yml
 ```
 
-You can run the playbook with "becomming" sudo via a parameter or by defining this in the script. (See playbook for example).
+You can run the playbook with "becomming" sudo via a parameter or by defining this in the script. (See line 4).
 
 ### Extra Variables
 

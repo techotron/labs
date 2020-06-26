@@ -8,7 +8,7 @@ resource "aws_vpc" "vpc" {
     enable_dns_support      = true
 
   tags = {
-    Name                    = "terraform_vpc"
+    Name                    = "${var.app}_vpc"
     built_by                = "terraform"
   }
 }
@@ -21,7 +21,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch   = true
 
   tags = {
-    Name                    = "terraform_subnet"
+    Name                    = "${var.app}_subnet"
     built_by                = "terraform"
     subnet_type             = "public"
   }
@@ -35,7 +35,7 @@ resource "aws_subnet" "private" {
   map_public_ip_on_launch   = false
 
   tags = {
-    Name                    = "terraform_subnet"
+    Name                    = "${var.app}_subnet"
     built_by                = "terraform"
     subnet_type             = "private"
   }
@@ -45,7 +45,7 @@ resource "aws_internet_gateway" "gateway" {
   vpc_id                    = "${aws_vpc.vpc.id}"
 
   tags = {
-    Name                    = "terraform_gateway"
+    Name                    = "${var.app}_gateway"
     built_by                = "terraform"
   }
 }
@@ -59,7 +59,7 @@ resource "aws_route_table" "route" {
   }
 
   tags = {
-    Name                    = "terraform_route"
+    Name                    = "${var.app}_route"
     built_by                = "terraform"
   }
 }
@@ -77,7 +77,7 @@ resource "aws_security_group" "allow_ssh" {
   }
 
   tags = {
-    Name                    = "terraform_security_group"
+    Name                    = "${var.app}_security_group"
     built_by                = "terraform"
   }
 }

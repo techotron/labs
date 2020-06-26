@@ -24,11 +24,19 @@ This will produce the `terraform.tfstate.backup` file and create a summary of th
 
 `terraform plan`
 
+or
+
+`terraform plan -var app="ecs-cluster"`
+
 ### Apply
 
 This will apply the changes against the provider you've defined.
 
 `terraform apply`
+
+or
+
+`terraform apply -var app="ecs-cluster"`
 
 ### Destroy
 

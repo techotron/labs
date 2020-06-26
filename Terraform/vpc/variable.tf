@@ -17,3 +17,8 @@ variable "web_security_group" {
   type      = "list"
   default   = ["80", "443"]
 }
+
+variable "app" {
+  type      = "string"
+  default   = "terraform"
+}

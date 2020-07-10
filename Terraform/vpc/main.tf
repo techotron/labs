@@ -163,10 +163,10 @@ resource "aws_security_group" "public_allow" {
 
   egress {
       # allow all traffic to private SN
-      from_port     = "0"
-      to_port       = "0"
-      protocol      = "-1"
-      cidr_blocks   = [
+      from_port             = "0"
+      to_port               = "0"
+      protocol              = "-1"
+      cidr_blocks           = [
         "0.0.0.0/0"
       ]
   }
@@ -178,21 +178,22 @@ resource "aws_security_group" "public_allow" {
 }
 
 resource "aws_security_group" "internal_allow" {
-  name        = "internal_allow"
-  description = "Allow traffic between subnets"
-  vpc_id      = "${aws_vpc.vpc.id}"
+  name                      = "internal_allow"
+  description               = "Allow traffic between subnets"
+  vpc_id                    = "${aws_vpc.vpc.id}"
 
   ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "tcp"
-    cidr_blocks = [
-      "${var.public_subnet[0]}",
-      "${var.public_subnet[1]}",
-      "${var.private_subnet[0]}",
-      "${var.private_subnet[1]}"
+    from_port               = 0
+    to_port                 = 0
+    protocol                = "tcp"
+    cidr_blocks             = [
+      "${var.public_subnet_a}",
+      "${var.public_subnet_b}",
+      "${var.private_subnet_a}",
+      "${var.private_subnet_b}"
     ]
   }
+  
   tags = {
     Name                    = "${var.app}_internal_allow"
     built_by                = "terraform"

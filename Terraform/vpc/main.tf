@@ -13,11 +13,41 @@ resource "aws_vpc" "vpc" {
   }
 }
 
-resource "aws_subnet" "public" {
-  count                     = "${length(var.public_subnet)}"
+# Below is an example of looping through a list. It was a pain to manage when I wanted to reference
+# subnets in other tf resources.
+
+# resource "aws_subnet" "public" {
+#   count                     = "${length(var.public_subnet)}"
+#   vpc_id                    = "${aws_vpc.vpc.id}"
+#   cidr_block                = "${var.public_subnet[count.index]}"
+#   availability_zone         = "${data.aws_availability_zones.available.names[count.index]}"
+#   map_public_ip_on_launch   = true
+
+#   tags = {
+#     Name                    = "${var.app}_subnet"
+#     built_by                = "terraform"
+#     subnet_type             = "public"
+#   }
+# }
+
+# resource "aws_subnet" "private" {
+#   count                     = "${length(var.private_subnet)}"
+#   vpc_id                    = "${aws_vpc.vpc.id}"
+#   cidr_block                = "${var.private_subnet[count.index]}"
+#   availability_zone         = "${data.aws_availability_zones.available.names[count.index]}"
+#   map_public_ip_on_launch   = false
+
+#   tags = {
+#     Name                    = "${var.app}_subnet"
+#     built_by                = "terraform"
+#     subnet_type             = "private"
+#   }
+# }
+
+resource "aws_subnet" "public_a" {
   vpc_id                    = "${aws_vpc.vpc.id}"
-  cidr_block                = "${var.public_subnet[count.index]}"
-  availability_zone         = "${data.aws_availability_zones.available.names[count.index]}"
+  cidr_block                = "${var.public_subnet_a}"
+  availability_zone         = "${data.aws_availability_zones.available.names[0]}"
   map_public_ip_on_launch   = true
 
   tags = {
@@ -27,12 +57,35 @@ resource "aws_subnet" "public" {
   }
 }
 
-resource "aws_subnet" "private" {
-  count                     = "${length(var.private_subnet)}"
+resource "aws_subnet" "public_b" {
   vpc_id                    = "${aws_vpc.vpc.id}"
-  cidr_block                = "${var.private_subnet[count.index]}"
-  availability_zone         = "${data.aws_availability_zones.available.names[count.index]}"
-  map_public_ip_on_launch   = false
+  cidr_block                = "${var.public_subnet_b}"
+  availability_zone         = "${data.aws_availability_zones.available.names[1]}"
+  map_public_ip_on_launch   = true
+
+  tags = {
+    Name                    = "${var.app}_subnet"
+    built_by                = "terraform"
+    subnet_type             = "public"
+  }
+}
+
+resource "aws_subnet" "private_a" {
+  vpc_id                    = "${aws_vpc.vpc.id}"
+  cidr_block                = "${var.private_subnet_a}"
+  availability_zone         = "${data.aws_availability_zones.available.names[0]}"
+
+  tags = {
+    Name                    = "${var.app}_subnet"
+    built_by                = "terraform"
+    subnet_type             = "private"
+  }
+}
+
+resource "aws_subnet" "private_b" {
+  vpc_id                    = "${aws_vpc.vpc.id}"
+  cidr_block                = "${var.private_subnet_b}"
+  availability_zone         = "${data.aws_availability_zones.available.names[1]}"
 
   tags = {
     Name                    = "${var.app}_subnet"
@@ -110,10 +163,10 @@ resource "aws_security_group" "public_allow" {
 
   egress {
       # allow all traffic to private SN
-      from_port = "0"
-      to_port = "0"
-      protocol = "-1"
-      cidr_blocks = [
+      from_port     = "0"
+      to_port       = "0"
+      protocol      = "-1"
+      cidr_blocks   = [
         "0.0.0.0/0"
       ]
   }
@@ -125,14 +178,14 @@ resource "aws_security_group" "public_allow" {
 }
 
 resource "aws_security_group" "internal_allow" {
-  name    = "internal_allow"
+  name        = "internal_allow"
   description = "Allow traffic between subnets"
-  vpc_id = "${aws_vpc.vpc.id}"
+  vpc_id      = "${aws_vpc.vpc.id}"
 
   ingress {
-    from_port = 0
-    to_port = 0
-    protocol = "tcp"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "tcp"
     cidr_blocks = [
       "${var.public_subnet[0]}",
       "${var.public_subnet[1]}",

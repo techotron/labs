@@ -77,7 +77,68 @@ resource "aws_security_group" "allow_ssh" {
   }
 
   tags = {
-    Name                    = "${var.app}_security_group"
+    Name                    = "${var.app}_ssh_allow"
+    built_by                = "terraform"
+  }
+}
+
+resource "aws_security_group" "public_allow" {
+  name                      = "public_allow"
+  description               = "Allow standard web ports"
+  vpc_id                    = "${aws_vpc.vpc.id}"
+
+  ingress {
+    from_port               = 80
+    to_port                 = 80
+    protocol                = "tcp"
+    cidr_blocks             = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port               = 8080
+    to_port                 = 8080
+    protocol                = "tcp"
+    cidr_blocks             = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port               = 443
+    to_port                 = 443
+    protocol                = "tcp"
+    cidr_blocks             = ["0.0.0.0/0"]
+  }  
+
+  egress {
+      # allow all traffic to private SN
+      from_port = "0"
+      to_port = "0"
+      protocol = "-1"
+      cidr_blocks = [
+        "0.0.0.0/0"
+      ]
+  }
+
+resource "aws_security_group" "internal_allow" {
+  name    = "internal_allow"
+  description = "Allow traffic between subnets"
+  vpc_id = "${aws_vpc.vpc.id}"
+
+  ingress {
+    from_port = 0
+    to_port = 0
+    protocol = "tcp"
+    cidr_blocks = [
+      "${var.public_subnet[0]}",
+      "${var.public_subnet[1]}",
+      "${var.private_subnet[0]}",
+      "${var.private_subnet[1]}"
+    ]
+  }
+
+}
+
+  tags = {
+    Name                    = "${var.app}_public_allow"
     built_by                = "terraform"
   }
 }

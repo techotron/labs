@@ -1,9 +1,17 @@
-Create VPC (if not already exists)
+# Create ECS Cluster
+
+## Reprequisites 
+
+VPC created from [here](../vpc/readme.md)
+
+## Commands
 
 ```bash
 cd ../vpc
-terraform plan -var app="ecs-cluster"
-terraform apply -var app="ecs-cluster" -state ecs-cluster.tfstate
+tfenv use 0.12.12
+terraform init
+terraform plan
+terraform apply
 ```
 
 Create ECS cluster:

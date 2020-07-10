@@ -118,6 +118,12 @@ resource "aws_security_group" "public_allow" {
       ]
   }
 
+  tags = {
+    Name                    = "${var.app}_public_allow"
+    built_by                = "terraform"
+  }  
+}
+
 resource "aws_security_group" "internal_allow" {
   name    = "internal_allow"
   description = "Allow traffic between subnets"
@@ -134,11 +140,8 @@ resource "aws_security_group" "internal_allow" {
       "${var.private_subnet[1]}"
     ]
   }
-
-}
-
   tags = {
-    Name                    = "${var.app}_public_allow"
+    Name                    = "${var.app}_internal_allow"
     built_by                = "terraform"
-  }
+  }  
 }

@@ -1,4 +1,4 @@
 variable "app" {
   type      = "string"
-  default   = "ecs-cluster"
+  default   = "my-app"
 }

@@ -1,11 +1,6 @@
 # Create ECS Cluster
 
-## Reprequisites 
-
-VPC created from [here](../vpc/readme.md)
-
 ## Commands
-
 ```bash
 cd ../vpc
 tfenv use 0.12.12
@@ -13,6 +8,10 @@ terraform init
 terraform plan
 terraform apply
 ```
+
+## Variables
+These can be defined on the command line or by keeping them in the `terraform.tfvars` file.
+
 
 Create ECS cluster:
 (EC2 Linux +_Networking) 
@@ -23,8 +22,8 @@ Old but might be relevant:
 TODO:
 
 1. Create VPC (done)
-1. Create IAM roles
-1. Set up ALB
+1. Create IAM roles (done)
+1. Set up ALB (http://blog.shippable.com/setup-a-container-cluster-on-aws-with-terraform-part-2-provision-a-cluster)
 1. Set up ASG
 1. Create ECS cluster
 1. Create task definition and service 

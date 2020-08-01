@@ -2,7 +2,7 @@ syntax="proto3";
 
 package main;
 
-// option go_package = "github.com/techotron/labs/golang;labs";
+option go_package = "github.com/techotron/labs/golang;labs";
 
 message Person {
   string name = 1;

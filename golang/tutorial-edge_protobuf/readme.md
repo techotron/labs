@@ -1,3 +1,7 @@
+# Links
+
+- [What the compiler is doing]
+
 # Install Compiler
 You need to install the protobuf compiler, `protoc`. Then use `proto-gen-go` which is a plugin for `protoc` which allows you to generate Golang code for a given .proto file.
 
@@ -41,3 +45,5 @@ please specify it with the full Go package path as
 a future release of protoc-gen-go will require this be specified.
 See https://developers.google.com/protocol-buffers/docs/reference/go-generated#package for more information.
 ```
+
+[What the compiler is doing]: https://buf.build/docs/build-images "What the compiler is doing"

@@ -187,10 +187,10 @@ resource "aws_security_group" "internal_allow" {
     to_port                 = 0
     protocol                = "tcp"
     cidr_blocks             = [
-      "${var.public_subnet_a}",
-      "${var.public_subnet_b}",
-      "${var.private_subnet_a}",
-      "${var.private_subnet_b}"
+      var.public_subnet_a,
+      var.public_subnet_b,
+      var.private_subnet_a,
+      var.private_subnet_b
     ]
   }
   

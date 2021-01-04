@@ -47,7 +47,7 @@ resource "aws_vpc" "vpc" {
 resource "aws_subnet" "public_a" {
   vpc_id                    = aws_vpc.vpc.id
   cidr_block                = var.public_subnet_a
-  availability_zone         = "${data.aws_availability_zones.available.names[0]}"
+  availability_zone         = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch   = true
 
   tags = {
@@ -60,7 +60,7 @@ resource "aws_subnet" "public_a" {
 resource "aws_subnet" "public_b" {
   vpc_id                    = aws_vpc.vpc.id
   cidr_block                = var.public_subnet_b
-  availability_zone         = "${data.aws_availability_zones.available.names[1]}"
+  availability_zone         = data.aws_availability_zones.available.names[1]
   map_public_ip_on_launch   = true
 
   tags = {
@@ -73,7 +73,7 @@ resource "aws_subnet" "public_b" {
 resource "aws_subnet" "private_a" {
   vpc_id                    = aws_vpc.vpc.id
   cidr_block                = var.private_subnet_a
-  availability_zone         = "${data.aws_availability_zones.available.names[0]}"
+  availability_zone         = data.aws_availability_zones.available.names[0]
 
   tags = {
     Name                    = "${var.app}_subnet"
@@ -85,7 +85,7 @@ resource "aws_subnet" "private_a" {
 resource "aws_subnet" "private_b" {
   vpc_id                    = aws_vpc.vpc.id
   cidr_block                = var.private_subnet_b
-  availability_zone         = "${data.aws_availability_zones.available.names[1]}"
+  availability_zone         = data.aws_availability_zones.available.names[1]
 
   tags = {
     Name                    = "${var.app}_subnet"

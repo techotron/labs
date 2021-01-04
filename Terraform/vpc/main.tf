@@ -45,7 +45,7 @@ resource "aws_vpc" "vpc" {
 # }
 
 resource "aws_subnet" "public_a" {
-  vpc_id                    = "${aws_vpc.vpc.id}"
+  vpc_id                    = ${aws_vpc.vpc.id}
   cidr_block                = "${var.public_subnet_a}"
   availability_zone         = "${data.aws_availability_zones.available.names[0]}"
   map_public_ip_on_launch   = true

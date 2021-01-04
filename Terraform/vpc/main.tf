@@ -45,8 +45,8 @@ resource "aws_vpc" "vpc" {
 # }
 
 resource "aws_subnet" "public_a" {
-  vpc_id                    = ${aws_vpc.vpc.id}
-  cidr_block                = "${var.public_subnet_a}"
+  vpc_id                    = aws_vpc.vpc.id
+  cidr_block                = var.public_subnet_a
   availability_zone         = "${data.aws_availability_zones.available.names[0]}"
   map_public_ip_on_launch   = true
 
@@ -58,8 +58,8 @@ resource "aws_subnet" "public_a" {
 }
 
 resource "aws_subnet" "public_b" {
-  vpc_id                    = "${aws_vpc.vpc.id}"
-  cidr_block                = "${var.public_subnet_b}"
+  vpc_id                    = aws_vpc.vpc.id
+  cidr_block                = var.public_subnet_b
   availability_zone         = "${data.aws_availability_zones.available.names[1]}"
   map_public_ip_on_launch   = true
 
@@ -71,8 +71,8 @@ resource "aws_subnet" "public_b" {
 }
 
 resource "aws_subnet" "private_a" {
-  vpc_id                    = "${aws_vpc.vpc.id}"
-  cidr_block                = "${var.private_subnet_a}"
+  vpc_id                    = aws_vpc.vpc.id
+  cidr_block                = var.private_subnet_a
   availability_zone         = "${data.aws_availability_zones.available.names[0]}"
 
   tags = {
@@ -83,8 +83,8 @@ resource "aws_subnet" "private_a" {
 }
 
 resource "aws_subnet" "private_b" {
-  vpc_id                    = "${aws_vpc.vpc.id}"
-  cidr_block                = "${var.private_subnet_b}"
+  vpc_id                    = aws_vpc.vpc.id
+  cidr_block                = var.private_subnet_b
   availability_zone         = "${data.aws_availability_zones.available.names[1]}"
 
   tags = {
@@ -95,7 +95,7 @@ resource "aws_subnet" "private_b" {
 }
 
 resource "aws_internet_gateway" "gateway" {
-  vpc_id                    = "${aws_vpc.vpc.id}"
+  vpc_id                    = aws_vpc.vpc.id
 
   tags = {
     Name                    = "${var.app}_gateway"
@@ -104,11 +104,11 @@ resource "aws_internet_gateway" "gateway" {
 }
 
 resource "aws_route_table" "route" {
-  vpc_id                    = "${aws_vpc.vpc.id}"
+  vpc_id                    = aws_vpc.vpc.id
 
   route {
     cidr_block              = "0.0.0.0/0"
-    gateway_id              = "${aws_internet_gateway.gateway.id}"
+    gateway_id              = aws_internet_gateway.gateway.id
   }
 
   tags = {
@@ -120,7 +120,7 @@ resource "aws_route_table" "route" {
 resource "aws_security_group" "allow_ssh" {
   name                      = "allow_ssh"
   description               = "Allow SSH inbound traffic"
-  vpc_id                    = "${aws_vpc.vpc.id}"
+  vpc_id                    = aws_vpc.vpc.id
 
   ingress {
     from_port               = 22
@@ -138,7 +138,7 @@ resource "aws_security_group" "allow_ssh" {
 resource "aws_security_group" "public_allow" {
   name                      = "public_allow"
   description               = "Allow standard web ports"
-  vpc_id                    = "${aws_vpc.vpc.id}"
+  vpc_id                    = aws_vpc.vpc.id
 
   ingress {
     from_port               = 80
@@ -180,7 +180,7 @@ resource "aws_security_group" "public_allow" {
 resource "aws_security_group" "internal_allow" {
   name                      = "internal_allow"
   description               = "Allow traffic between subnets"
-  vpc_id                    = "${aws_vpc.vpc.id}"
+  vpc_id                    = aws_vpc.vpc.id
 
   ingress {
     from_port               = 0

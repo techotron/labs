@@ -26,3 +26,7 @@ Spec files to create:
 
 ## Validation
 Run the kubeval tool against the file you create for the resource and confirm it's correct. This will validate it's structure but won't confirm it's fufils the requirements in the above list. For this, the full spec files will put into the [manifests](./manifests) directory
+
+```bash
+kubeval --strict filename.yaml
+```
